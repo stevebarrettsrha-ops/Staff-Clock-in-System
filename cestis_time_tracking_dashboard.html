@@ -1735,7 +1735,12 @@
                 </div>
 
                 <div class="table-container">
-                    <h3 style="margin-bottom: 1rem;">All Staff Members</h3>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h3 style="margin: 0;">All Staff Members</h3>
+                        <button class="btn btn-primary btn-icon" onclick="generateStaffReportPDF()">
+                            <span>📄</span> Generate Staff Report
+                        </button>
+                    </div>
                     <table>
                         <thead>
                             <tr>
@@ -1850,26 +1855,30 @@
         // Login
         function handleLogin(event) {
             event.preventDefault();
-            
+
             const username = document.getElementById('loginUsername').value.trim();
             const password = document.getElementById('loginPassword').value;
-            
+
             const staff = staffMembers.find(s => s.username === username && s.password === password);
-            
+
             if (staff) {
-                currentUser = staff;
-                sessionStorage.setItem('cestisCurrentUser', JSON.stringify(staff));
+                // Check if staff account is inactive or suspended
+                if (staff.status === 'Inactive' || staff.status === 'Suspended') {
+                    const errorDiv = document.getElementById('loginError');
+                    errorDiv.textContent = `Your account is ${staff.status.toLowerCase()}. Please contact administrator.`;
+                    errorDiv.style.display = 'block';
+                    setTimeout(() => errorDiv.style.display = 'none', 5000);
+                    return;
+                }
 
-                document.getElementById('loginPage').style.display = 'none';
-                document.getElementById('mainDashboard').style.display = 'block';
-                document.getElementById('currentUserDisplay').textContent = `👤 ${staff.fullName} (${staff.workType})`;
+                // Check if password change is required
+                if (staff.mustChangePassword) {
+                    showPasswordChangeModal(staff);
+                    return;
+                }
 
-                updateUIForRole();
-                loadTodaysSession();
-                renderTodayLog();
-                renderHistory();
-
-                setTimeout(() => showToast(`Welcome back, ${staff.fullName}!`, 'success'), 300);
+                // Normal login
+                completeLogin(staff);
 
             } else {
                 const errorDiv = document.getElementById('loginError');
@@ -1877,6 +1886,121 @@
                 errorDiv.style.display = 'block';
                 setTimeout(() => errorDiv.style.display = 'none', 3000);
             }
+        }
+
+        // Complete login after password check
+        function completeLogin(staff) {
+            currentUser = staff;
+            sessionStorage.setItem('cestisCurrentUser', JSON.stringify(staff));
+
+            document.getElementById('loginPage').style.display = 'none';
+            document.getElementById('mainDashboard').style.display = 'block';
+            document.getElementById('currentUserDisplay').textContent = `👤 ${staff.fullName} (${staff.workType})`;
+
+            updateUIForRole();
+            if (currentUser.role !== 'Viewer') {
+                loadTodaysSession();
+                renderTodayLog();
+            }
+            renderHistory();
+
+            setTimeout(() => showToast(`Welcome back, ${staff.fullName}!`, 'success'), 300);
+        }
+
+        // Show password change modal for first login
+        function showPasswordChangeModal(staff) {
+            const modal = document.createElement('div');
+            modal.id = 'passwordChangeModal';
+            modal.style.cssText = 'display: flex; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(4px); z-index: 1000; justify-content: center; align-items: center;';
+
+            modal.innerHTML = `
+                <div style="background: var(--bg-secondary); padding: 2rem; border-radius: 24px; max-width: 450px; width: 90%; box-shadow: var(--shadow-xl);">
+                    <h2 style="color: var(--primary-blue); font-weight: 800; margin-bottom: 0.5rem;">🔐 Password Change Required</h2>
+                    <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">You must change your password before continuing.</p>
+
+                    <input type="hidden" id="passwordChangeUsername" value="${staff.username}">
+
+                    <div class="form-group">
+                        <label style="color: #1e293b;">Current Password</label>
+                        <input type="password" id="currentPasswordInput" class="login-input" style="width: 100%;">
+                    </div>
+
+                    <div class="form-group">
+                        <label style="color: #1e293b;">New Password</label>
+                        <input type="password" id="newPasswordInput" class="login-input" style="width: 100%;">
+                    </div>
+
+                    <div class="form-group">
+                        <label style="color: #1e293b;">Confirm New Password</label>
+                        <input type="password" id="confirmPasswordInput" class="login-input" style="width: 100%;">
+                    </div>
+
+                    <div id="passwordChangeError" style="background: #fee2e2; color: #dc2626; padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 1rem; display: none;"></div>
+
+                    <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                        <button class="btn btn-success" onclick="submitPasswordChange()" style="flex: 1;">Change Password</button>
+                        <button class="btn btn-secondary" onclick="document.getElementById('passwordChangeModal').remove()">Cancel</button>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(modal);
+        }
+
+        // Submit password change
+        function submitPasswordChange() {
+            const username = document.getElementById('passwordChangeUsername').value;
+            const currentPassword = document.getElementById('currentPasswordInput').value;
+            const newPassword = document.getElementById('newPasswordInput').value;
+            const confirmPassword = document.getElementById('confirmPasswordInput').value;
+            const errorDiv = document.getElementById('passwordChangeError');
+
+            // Find staff member
+            const staffIndex = staffMembers.findIndex(s => s.username === username);
+            if (staffIndex === -1) {
+                errorDiv.textContent = 'User not found';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            const staff = staffMembers[staffIndex];
+
+            // Validate current password
+            if (currentPassword !== staff.password) {
+                errorDiv.textContent = 'Current password is incorrect';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            // Validate new password
+            if (newPassword.length < 4) {
+                errorDiv.textContent = 'New password must be at least 4 characters';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            if (newPassword !== confirmPassword) {
+                errorDiv.textContent = 'New passwords do not match';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            if (newPassword === currentPassword) {
+                errorDiv.textContent = 'New password must be different from current password';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            // Update password
+            staff.password = newPassword;
+            staff.mustChangePassword = false;
+            staff.passwordChangedDate = new Date().toISOString();
+            saveStaffMembers();
+
+            // Close modal and complete login
+            document.getElementById('passwordChangeModal').remove();
+            showToast('Password changed successfully!', 'success');
+            completeLogin(staff);
         }
 
         // Logout
@@ -2552,8 +2676,9 @@
                     <td><span class="badge ${roleBadge}">${staff.role}</span></td>
                     <td><span class="badge badge-success">${staff.status}</span></td>
                     <td>
-                        <button class="btn btn-primary" onclick="viewStaffDetails(${index})" style="margin-right: 0.5rem;">View</button>
-                        <button class="btn btn-danger" onclick="deleteStaff(${index})" ${staff.role === 'Admin' ? 'disabled' : ''}>Delete</button>
+                        <button class="btn btn-primary" onclick="viewStaffDetails(${index})" style="margin-right: 0.25rem;">View</button>
+                        <button class="btn btn-warning" onclick="editStaffDetails(${index})" style="margin-right: 0.25rem;">Edit</button>
+                        <button class="btn btn-danger" onclick="deleteStaff(${index})" ${staff.role === 'Admin' && staff.username === 'admin' ? 'disabled' : ''}>Delete</button>
                     </td>
                 `;
             });
@@ -2652,6 +2777,320 @@
             `;
 
             document.body.appendChild(modal);
+        }
+
+        // Edit Staff Details Modal
+        function editStaffDetails(index) {
+            const staff = staffMembers[index];
+            const modal = document.createElement('div');
+            modal.id = 'editStaffModal';
+            modal.style.cssText = 'display: flex; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); z-index: 1000; justify-content: center; align-items: center;';
+
+            const emergencyContact = staff.emergencyContact || {};
+
+            modal.innerHTML = `
+                <div style="background: var(--bg-secondary); padding: 2rem; border-radius: 24px; max-width: 800px; width: 90%; max-height: 90vh; overflow-y: auto; box-shadow: var(--shadow-xl);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                        <h2 style="color: var(--primary-blue); font-weight: 800;">✏️ Edit Staff Member</h2>
+                        <button onclick="document.getElementById('editStaffModal').remove()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-secondary);">&times;</button>
+                    </div>
+
+                    <input type="hidden" id="editStaffIndex" value="${index}">
+
+                    <!-- Account Information -->
+                    <h4 style="color: var(--primary-teal); margin: 1rem 0 0.75rem; padding-bottom: 0.5rem; border-bottom: 2px solid var(--border-color);">📋 Account Information</h4>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Full Name *</label>
+                            <input type="text" id="editStaffName" value="${staff.fullName || ''}">
+                        </div>
+                        <div class="form-group">
+                            <label>Employee ID / Username</label>
+                            <input type="text" id="editStaffUsername" value="${staff.username || ''}" ${staff.username === 'admin' ? 'disabled' : ''}>
+                        </div>
+                        <div class="form-group">
+                            <label>Work Type *</label>
+                            <select id="editStaffWorkType">
+                                <option value="Full-Time" ${staff.workType === 'Full-Time' ? 'selected' : ''}>Full-Time</option>
+                                <option value="Part-Time" ${staff.workType === 'Part-Time' ? 'selected' : ''}>Part-Time</option>
+                                <option value="Work From Home" ${staff.workType === 'Work From Home' ? 'selected' : ''}>Work From Home</option>
+                                <option value="Flexiwork" ${staff.workType === 'Flexiwork' ? 'selected' : ''}>Flexiwork</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Role *</label>
+                            <select id="editStaffRole" ${staff.username === 'admin' ? 'disabled' : ''}>
+                                <option value="Staff" ${staff.role === 'Staff' ? 'selected' : ''}>Staff</option>
+                                <option value="Viewer" ${staff.role === 'Viewer' ? 'selected' : ''}>Viewer (View Only)</option>
+                                <option value="Admin" ${staff.role === 'Admin' ? 'selected' : ''}>Admin</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Status</label>
+                            <select id="editStaffStatus">
+                                <option value="Active" ${staff.status === 'Active' ? 'selected' : ''}>Active</option>
+                                <option value="Inactive" ${staff.status === 'Inactive' ? 'selected' : ''}>Inactive</option>
+                                <option value="Suspended" ${staff.status === 'Suspended' ? 'selected' : ''}>Suspended</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Password Reset Section -->
+                    <h4 style="color: var(--primary-teal); margin: 1.5rem 0 0.75rem; padding-bottom: 0.5rem; border-bottom: 2px solid var(--border-color);">🔐 Password Management</h4>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>New Password (leave blank to keep current)</label>
+                            <input type="password" id="editStaffNewPassword" placeholder="Enter new password">
+                        </div>
+                        <div class="form-group">
+                            <label>Confirm New Password</label>
+                            <input type="password" id="editStaffConfirmPassword" placeholder="Confirm new password">
+                        </div>
+                        <div class="form-group">
+                            <label style="display: flex; align-items: center; gap: 0.5rem;">
+                                <input type="checkbox" id="editStaffForcePasswordChange" ${staff.mustChangePassword ? 'checked' : ''}>
+                                Require password change on next login
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Personal Information -->
+                    <h4 style="color: var(--primary-teal); margin: 1.5rem 0 0.75rem; padding-bottom: 0.5rem; border-bottom: 2px solid var(--border-color);">👤 Personal Information</h4>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Email Address</label>
+                            <input type="email" id="editStaffEmail" value="${staff.email || ''}">
+                        </div>
+                        <div class="form-group">
+                            <label>Phone Number</label>
+                            <input type="tel" id="editStaffPhone" value="${staff.phone || ''}">
+                        </div>
+                        <div class="form-group">
+                            <label>Date of Birth</label>
+                            <input type="date" id="editStaffDOB" value="${staff.dateOfBirth || ''}">
+                        </div>
+                        <div class="form-group">
+                            <label>Gender</label>
+                            <select id="editStaffGender">
+                                <option value="">-- Select --</option>
+                                <option value="Male" ${staff.gender === 'Male' ? 'selected' : ''}>Male</option>
+                                <option value="Female" ${staff.gender === 'Female' ? 'selected' : ''}>Female</option>
+                                <option value="Other" ${staff.gender === 'Other' ? 'selected' : ''}>Other</option>
+                                <option value="Prefer not to say" ${staff.gender === 'Prefer not to say' ? 'selected' : ''}>Prefer not to say</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="grid-column: span 2;">
+                            <label>Home Address</label>
+                            <input type="text" id="editStaffAddress" value="${staff.address || ''}">
+                        </div>
+                        <div class="form-group">
+                            <label>Emergency Contact Name</label>
+                            <input type="text" id="editStaffEmergencyName" value="${emergencyContact.name || ''}">
+                        </div>
+                        <div class="form-group">
+                            <label>Emergency Contact Phone</label>
+                            <input type="tel" id="editStaffEmergencyPhone" value="${emergencyContact.phone || ''}">
+                        </div>
+                    </div>
+
+                    <!-- Professional Information -->
+                    <h4 style="color: var(--primary-teal); margin: 1.5rem 0 0.75rem; padding-bottom: 0.5rem; border-bottom: 2px solid var(--border-color);">🎓 Professional Information</h4>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Department</label>
+                            <select id="editStaffDepartment">
+                                <option value="">-- Select Department --</option>
+                                <option value="Administration" ${staff.department === 'Administration' ? 'selected' : ''}>Administration</option>
+                                <option value="Education" ${staff.department === 'Education' ? 'selected' : ''}>Education</option>
+                                <option value="Training" ${staff.department === 'Training' ? 'selected' : ''}>Training</option>
+                                <option value="IT & Technology" ${staff.department === 'IT & Technology' ? 'selected' : ''}>IT & Technology</option>
+                                <option value="Finance" ${staff.department === 'Finance' ? 'selected' : ''}>Finance</option>
+                                <option value="Human Resources" ${staff.department === 'Human Resources' ? 'selected' : ''}>Human Resources</option>
+                                <option value="Operations" ${staff.department === 'Operations' ? 'selected' : ''}>Operations</option>
+                                <option value="Community Services" ${staff.department === 'Community Services' ? 'selected' : ''}>Community Services</option>
+                                <option value="Other" ${staff.department === 'Other' ? 'selected' : ''}>Other</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Job Title</label>
+                            <input type="text" id="editStaffJobTitle" value="${staff.jobTitle || ''}">
+                        </div>
+                        <div class="form-group">
+                            <label>Highest Education Level</label>
+                            <select id="editStaffEducation">
+                                <option value="">-- Select --</option>
+                                <option value="Secondary School" ${staff.education === 'Secondary School' ? 'selected' : ''}>Secondary School</option>
+                                <option value="A-Levels / College" ${staff.education === 'A-Levels / College' ? 'selected' : ''}>A-Levels / College</option>
+                                <option value="Diploma" ${staff.education === 'Diploma' ? 'selected' : ''}>Diploma</option>
+                                <option value="Bachelor's Degree" ${staff.education === "Bachelor's Degree" ? 'selected' : ''}>Bachelor's Degree</option>
+                                <option value="Master's Degree" ${staff.education === "Master's Degree" ? 'selected' : ''}>Master's Degree</option>
+                                <option value="Doctorate / PhD" ${staff.education === 'Doctorate / PhD' ? 'selected' : ''}>Doctorate / PhD</option>
+                                <option value="Professional Qualification" ${staff.education === 'Professional Qualification' ? 'selected' : ''}>Professional Qualification</option>
+                                <option value="Other" ${staff.education === 'Other' ? 'selected' : ''}>Other</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Start Date</label>
+                            <input type="date" id="editStaffStartDate" value="${staff.startDate || ''}">
+                        </div>
+                        <div class="form-group" style="grid-column: span 2;">
+                            <label>Qualifications & Certifications</label>
+                            <textarea id="editStaffQualifications" rows="2" style="width: 100%; padding: 12px; border: 2px solid var(--border-color); border-radius: 12px; font-size: 14px; resize: vertical;">${staff.qualifications || ''}</textarea>
+                        </div>
+                        <div class="form-group" style="grid-column: span 2;">
+                            <label>Skills & Expertise</label>
+                            <textarea id="editStaffSkills" rows="2" style="width: 100%; padding: 12px; border: 2px solid var(--border-color); border-radius: 12px; font-size: 14px; resize: vertical;">${staff.skills || ''}</textarea>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: 1rem; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--border-color);">
+                        <button class="btn btn-success" onclick="saveStaffEdit()">💾 Save Changes</button>
+                        <button class="btn btn-secondary" onclick="document.getElementById('editStaffModal').remove()">Cancel</button>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(modal);
+        }
+
+        // Save Staff Edit
+        function saveStaffEdit() {
+            const index = parseInt(document.getElementById('editStaffIndex').value);
+            const staff = staffMembers[index];
+
+            // Get values
+            const newPassword = document.getElementById('editStaffNewPassword').value;
+            const confirmPassword = document.getElementById('editStaffConfirmPassword').value;
+
+            // Validate password if changing
+            if (newPassword) {
+                if (newPassword !== confirmPassword) {
+                    showToast('Passwords do not match', 'error');
+                    return;
+                }
+                if (newPassword.length < 4) {
+                    showToast('Password must be at least 4 characters', 'error');
+                    return;
+                }
+                staff.password = newPassword;
+            }
+
+            // Update all fields
+            staff.fullName = document.getElementById('editStaffName').value.trim();
+            if (staff.username !== 'admin') {
+                staff.username = document.getElementById('editStaffUsername').value.trim();
+                staff.role = document.getElementById('editStaffRole').value;
+            }
+            staff.workType = document.getElementById('editStaffWorkType').value;
+            staff.status = document.getElementById('editStaffStatus').value;
+            staff.mustChangePassword = document.getElementById('editStaffForcePasswordChange').checked;
+
+            // Personal Information
+            staff.email = document.getElementById('editStaffEmail').value.trim();
+            staff.phone = document.getElementById('editStaffPhone').value.trim();
+            staff.dateOfBirth = document.getElementById('editStaffDOB').value;
+            staff.gender = document.getElementById('editStaffGender').value;
+            staff.address = document.getElementById('editStaffAddress').value.trim();
+            staff.emergencyContact = {
+                name: document.getElementById('editStaffEmergencyName').value.trim(),
+                phone: document.getElementById('editStaffEmergencyPhone').value.trim()
+            };
+
+            // Professional Information
+            staff.department = document.getElementById('editStaffDepartment').value;
+            staff.jobTitle = document.getElementById('editStaffJobTitle').value.trim();
+            staff.education = document.getElementById('editStaffEducation').value;
+            staff.startDate = document.getElementById('editStaffStartDate').value;
+            staff.qualifications = document.getElementById('editStaffQualifications').value.trim();
+            staff.skills = document.getElementById('editStaffSkills').value.trim();
+
+            // Save and refresh
+            saveStaffMembers();
+            renderStaffTable();
+            populateStaffSelect();
+            populateEditStaffSelect();
+
+            document.getElementById('editStaffModal').remove();
+            showToast(`${staff.fullName}'s information updated successfully!`, 'success');
+        }
+
+        // Generate Staff Report PDF
+        function generateStaffReportPDF() {
+            // Filter out system administrator
+            const reportStaff = staffMembers.filter(s => s.username !== 'admin');
+
+            if (reportStaff.length === 0) {
+                showToast('No staff members to include in report', 'warning');
+                return;
+            }
+
+            const generationTimestamp = new Date().toLocaleString('en-GB', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+
+            // Build table rows
+            const tableRows = reportStaff.map((staff, idx) => `
+                <tr>
+                    <td>${idx + 1}</td>
+                    <td>${staff.username}</td>
+                    <td>${staff.fullName}</td>
+                    <td>${staff.department || '-'}</td>
+                    <td>${staff.jobTitle || '-'}</td>
+                    <td>${staff.workType}</td>
+                    <td>${staff.email || '-'}</td>
+                    <td>${staff.phone || '-'}</td>
+                    <td><span class="badge ${staff.status === 'Active' ? 'badge-success' : 'badge-warning'}">${staff.status}</span></td>
+                </tr>
+            `).join('');
+
+            // Department summary
+            const deptCounts = {};
+            reportStaff.forEach(s => {
+                const dept = s.department || 'Unassigned';
+                deptCounts[dept] = (deptCounts[dept] || 0) + 1;
+            });
+
+            const deptSummary = Object.entries(deptCounts).map(([dept, count]) =>
+                `<div class="summary-item"><div class="summary-label">${dept}</div><div class="summary-value">${count}</div></div>`
+            ).join('');
+
+            const content = `
+                <div class="print-summary" style="grid-template-columns: repeat(${Math.min(Object.keys(deptCounts).length, 4)}, 1fr);">
+                    ${deptSummary}
+                </div>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Employee ID</th>
+                            <th>Full Name</th>
+                            <th>Department</th>
+                            <th>Job Title</th>
+                            <th>Work Type</th>
+                            <th>Email</th>
+                            <th>Phone</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${tableRows}
+                    </tbody>
+                </table>
+
+                <div style="margin-top: 2rem; padding: 1rem; background: #f8fafc; border-radius: 8px;">
+                    <p style="margin: 0; font-size: 0.9rem;"><strong>Total Employees:</strong> ${reportStaff.length}</p>
+                    <p style="margin: 0.5rem 0 0; font-size: 0.9rem;"><strong>Active:</strong> ${reportStaff.filter(s => s.status === 'Active').length} |
+                    <strong>Inactive:</strong> ${reportStaff.filter(s => s.status !== 'Active').length}</p>
+                </div>
+            `;
+
+            openPrintWindow('Staff Directory Report', content);
         }
 
         function deleteStaff(index) {
