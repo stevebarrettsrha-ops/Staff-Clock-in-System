@@ -3105,17 +3105,15 @@
     <button class="print-btn no-print" onclick="window.print()">
         Print Report
     </button>
-
-    <scr` + `ipt>
-        // Auto-focus print window
-        window.focus();
-    </scr` + `ipt>
 </body>
 </html>`;
 
             // Write to the print window
             printWindow.document.write(printDocument);
             printWindow.document.close();
+
+            // Focus the print window
+            printWindow.focus();
 
             showToast('Print window opened. Click "Print Report" or use Ctrl+P.', 'success');
         }
