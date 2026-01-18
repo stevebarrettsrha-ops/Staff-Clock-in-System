@@ -1585,9 +1585,12 @@
             <!-- Staff Management Module (Admin) -->
             <div id="staff" class="module">
                 <h2 style="color: var(--primary-blue); margin-bottom: 1.5rem;">👥 Staff Management</h2>
-                
+
                 <div class="form-section">
                     <h3 style="margin-bottom: 1rem;">Add New Staff Member</h3>
+
+                    <!-- Basic Account Information -->
+                    <h4 style="color: var(--primary-teal); margin: 1.5rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid var(--border-color);">📋 Account Information</h4>
                     <div class="form-grid">
                         <div class="form-group">
                             <label>Full Name *</label>
@@ -1619,7 +1622,99 @@
                             </select>
                         </div>
                     </div>
-                    <button class="btn btn-success" onclick="addStaff()">➕ Add Staff Member</button>
+
+                    <!-- Personal Information -->
+                    <h4 style="color: var(--primary-teal); margin: 1.5rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid var(--border-color);">👤 Personal Information</h4>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Email Address</label>
+                            <input type="email" id="newStaffEmail" placeholder="email@example.com">
+                        </div>
+                        <div class="form-group">
+                            <label>Phone Number</label>
+                            <input type="tel" id="newStaffPhone" placeholder="+44 123 456 7890">
+                        </div>
+                        <div class="form-group">
+                            <label>Date of Birth</label>
+                            <input type="date" id="newStaffDOB">
+                        </div>
+                        <div class="form-group">
+                            <label>Gender</label>
+                            <select id="newStaffGender">
+                                <option value="">-- Select --</option>
+                                <option value="Male">Male</option>
+                                <option value="Female">Female</option>
+                                <option value="Other">Other</option>
+                                <option value="Prefer not to say">Prefer not to say</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="grid-column: span 2;">
+                            <label>Home Address</label>
+                            <input type="text" id="newStaffAddress" placeholder="Street, City, Postcode">
+                        </div>
+                        <div class="form-group">
+                            <label>Emergency Contact Name</label>
+                            <input type="text" id="newStaffEmergencyName" placeholder="Contact person name">
+                        </div>
+                        <div class="form-group">
+                            <label>Emergency Contact Phone</label>
+                            <input type="tel" id="newStaffEmergencyPhone" placeholder="+44 123 456 7890">
+                        </div>
+                    </div>
+
+                    <!-- Qualifications & Professional Info -->
+                    <h4 style="color: var(--primary-teal); margin: 1.5rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid var(--border-color);">🎓 Qualifications & Professional Information</h4>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Department</label>
+                            <select id="newStaffDepartment">
+                                <option value="">-- Select Department --</option>
+                                <option value="Administration">Administration</option>
+                                <option value="Education">Education</option>
+                                <option value="Training">Training</option>
+                                <option value="IT & Technology">IT & Technology</option>
+                                <option value="Finance">Finance</option>
+                                <option value="Human Resources">Human Resources</option>
+                                <option value="Operations">Operations</option>
+                                <option value="Community Services">Community Services</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Job Title</label>
+                            <input type="text" id="newStaffJobTitle" placeholder="e.g. Training Coordinator">
+                        </div>
+                        <div class="form-group">
+                            <label>Highest Education Level</label>
+                            <select id="newStaffEducation">
+                                <option value="">-- Select --</option>
+                                <option value="Secondary School">Secondary School</option>
+                                <option value="A-Levels / College">A-Levels / College</option>
+                                <option value="Diploma">Diploma</option>
+                                <option value="Bachelor's Degree">Bachelor's Degree</option>
+                                <option value="Master's Degree">Master's Degree</option>
+                                <option value="Doctorate / PhD">Doctorate / PhD</option>
+                                <option value="Professional Qualification">Professional Qualification</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Start Date</label>
+                            <input type="date" id="newStaffStartDate">
+                        </div>
+                        <div class="form-group" style="grid-column: span 2;">
+                            <label>Qualifications & Certifications</label>
+                            <textarea id="newStaffQualifications" rows="3" placeholder="List qualifications, certifications, and relevant training (e.g., NVQ Level 3, First Aid, PGCE, etc.)" style="width: 100%; padding: 12px; border: 2px solid var(--border-color); border-radius: 12px; font-size: 14px; resize: vertical;"></textarea>
+                        </div>
+                        <div class="form-group" style="grid-column: span 2;">
+                            <label>Skills & Expertise</label>
+                            <textarea id="newStaffSkills" rows="2" placeholder="List key skills (e.g., Microsoft Office, Project Management, Training Delivery)" style="width: 100%; padding: 12px; border: 2px solid var(--border-color); border-radius: 12px; font-size: 14px; resize: vertical;"></textarea>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 1.5rem;">
+                        <button class="btn btn-success" onclick="addStaff()">➕ Add Staff Member</button>
+                    </div>
                 </div>
 
                 <div class="table-container">
@@ -1629,6 +1724,8 @@
                             <tr>
                                 <th>Employee ID</th>
                                 <th>Full Name</th>
+                                <th>Department</th>
+                                <th>Job Title</th>
                                 <th>Work Type</th>
                                 <th>Role</th>
                                 <th>Status</th>
@@ -2159,11 +2256,29 @@
                 return;
             }
 
+            // Account Information
             const name = document.getElementById('newStaffName').value.trim();
             const username = document.getElementById('newStaffUsername').value.trim();
             const password = document.getElementById('newStaffPassword').value;
             const workType = document.getElementById('newStaffWorkType').value;
             const role = document.getElementById('newStaffRole').value;
+
+            // Personal Information
+            const email = document.getElementById('newStaffEmail').value.trim();
+            const phone = document.getElementById('newStaffPhone').value.trim();
+            const dob = document.getElementById('newStaffDOB').value;
+            const gender = document.getElementById('newStaffGender').value;
+            const address = document.getElementById('newStaffAddress').value.trim();
+            const emergencyName = document.getElementById('newStaffEmergencyName').value.trim();
+            const emergencyPhone = document.getElementById('newStaffEmergencyPhone').value.trim();
+
+            // Qualifications & Professional Info
+            const department = document.getElementById('newStaffDepartment').value;
+            const jobTitle = document.getElementById('newStaffJobTitle').value.trim();
+            const education = document.getElementById('newStaffEducation').value;
+            const startDate = document.getElementById('newStaffStartDate').value;
+            const qualifications = document.getElementById('newStaffQualifications').value.trim();
+            const skills = document.getElementById('newStaffSkills').value.trim();
 
             if (!name || !username || !password) {
                 showToast('Please fill in all required fields', 'warning');
@@ -2183,7 +2298,24 @@
                 workType: workType,
                 role: role,
                 status: 'Active',
-                createdDate: new Date().toISOString()
+                createdDate: new Date().toISOString(),
+                // Personal Information
+                email: email,
+                phone: phone,
+                dateOfBirth: dob,
+                gender: gender,
+                address: address,
+                emergencyContact: {
+                    name: emergencyName,
+                    phone: emergencyPhone
+                },
+                // Professional Information
+                department: department,
+                jobTitle: jobTitle,
+                education: education,
+                startDate: startDate,
+                qualifications: qualifications,
+                skills: skills
             };
 
             staffMembers.push(newStaff);
@@ -2192,9 +2324,23 @@
             populateStaffSelect();
             populateEditStaffSelect();
 
+            // Clear all form fields
             document.getElementById('newStaffName').value = '';
             document.getElementById('newStaffUsername').value = '';
             document.getElementById('newStaffPassword').value = '';
+            document.getElementById('newStaffEmail').value = '';
+            document.getElementById('newStaffPhone').value = '';
+            document.getElementById('newStaffDOB').value = '';
+            document.getElementById('newStaffGender').value = '';
+            document.getElementById('newStaffAddress').value = '';
+            document.getElementById('newStaffEmergencyName').value = '';
+            document.getElementById('newStaffEmergencyPhone').value = '';
+            document.getElementById('newStaffDepartment').value = '';
+            document.getElementById('newStaffJobTitle').value = '';
+            document.getElementById('newStaffEducation').value = '';
+            document.getElementById('newStaffStartDate').value = '';
+            document.getElementById('newStaffQualifications').value = '';
+            document.getElementById('newStaffSkills').value = '';
 
             showToast(`Staff member "${name}" added successfully!`, 'success');
         }
@@ -2205,27 +2351,93 @@
 
             staffMembers.forEach((staff, index) => {
                 const row = tbody.insertRow();
-                
+
                 let workTypeBadge = 'badge-primary';
                 if (staff.workType === 'Part-Time') workTypeBadge = 'badge-warning';
                 else if (staff.workType === 'Work From Home') workTypeBadge = 'badge-success';
                 else if (staff.workType === 'Flexiwork') workTypeBadge = 'badge-primary';
-                
+
                 let roleBadge = 'badge-primary';
                 if (staff.role === 'Admin') roleBadge = 'badge-danger';
                 else if (staff.role === 'Viewer') roleBadge = 'badge-warning';
-                
+
                 row.innerHTML = `
                     <td>${staff.username}</td>
                     <td>${staff.fullName}</td>
+                    <td>${staff.department || '-'}</td>
+                    <td>${staff.jobTitle || '-'}</td>
                     <td><span class="badge ${workTypeBadge}">${staff.workType}</span></td>
                     <td><span class="badge ${roleBadge}">${staff.role}</span></td>
                     <td><span class="badge badge-success">${staff.status}</span></td>
                     <td>
+                        <button class="btn btn-primary" onclick="viewStaffDetails(${index})" style="margin-right: 0.5rem;">View</button>
                         <button class="btn btn-danger" onclick="deleteStaff(${index})" ${staff.role === 'Admin' ? 'disabled' : ''}>Delete</button>
                     </td>
                 `;
             });
+        }
+
+        // View Staff Details Modal
+        function viewStaffDetails(index) {
+            const staff = staffMembers[index];
+            const modal = document.createElement('div');
+            modal.id = 'staffDetailsModal';
+            modal.style.cssText = 'display: flex; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); z-index: 1000; justify-content: center; align-items: center;';
+
+            const emergencyContact = staff.emergencyContact || {};
+
+            modal.innerHTML = `
+                <div style="background: var(--bg-secondary); padding: 2rem; border-radius: 24px; max-width: 700px; width: 90%; max-height: 90vh; overflow-y: auto; box-shadow: var(--shadow-xl);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                        <h2 style="color: var(--primary-blue); font-weight: 800;">👤 Staff Profile</h2>
+                        <button onclick="document.getElementById('staffDetailsModal').remove()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-secondary);">&times;</button>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div style="grid-column: span 2; background: var(--bg-tertiary); padding: 1rem; border-radius: 12px; margin-bottom: 0.5rem;">
+                            <h3 style="color: var(--primary-teal); margin-bottom: 0.75rem; font-size: 1rem;">📋 Account Information</h3>
+                            <p><strong>Employee ID:</strong> ${staff.username}</p>
+                            <p><strong>Full Name:</strong> ${staff.fullName}</p>
+                            <p><strong>Role:</strong> ${staff.role}</p>
+                            <p><strong>Work Type:</strong> ${staff.workType}</p>
+                            <p><strong>Status:</strong> ${staff.status}</p>
+                        </div>
+
+                        <div style="background: var(--bg-tertiary); padding: 1rem; border-radius: 12px;">
+                            <h3 style="color: var(--primary-teal); margin-bottom: 0.75rem; font-size: 1rem;">👤 Personal Information</h3>
+                            <p><strong>Email:</strong> ${staff.email || '-'}</p>
+                            <p><strong>Phone:</strong> ${staff.phone || '-'}</p>
+                            <p><strong>Date of Birth:</strong> ${staff.dateOfBirth || '-'}</p>
+                            <p><strong>Gender:</strong> ${staff.gender || '-'}</p>
+                            <p><strong>Address:</strong> ${staff.address || '-'}</p>
+                        </div>
+
+                        <div style="background: var(--bg-tertiary); padding: 1rem; border-radius: 12px;">
+                            <h3 style="color: var(--primary-teal); margin-bottom: 0.75rem; font-size: 1rem;">🚨 Emergency Contact</h3>
+                            <p><strong>Name:</strong> ${emergencyContact.name || '-'}</p>
+                            <p><strong>Phone:</strong> ${emergencyContact.phone || '-'}</p>
+                        </div>
+
+                        <div style="grid-column: span 2; background: var(--bg-tertiary); padding: 1rem; border-radius: 12px;">
+                            <h3 style="color: var(--primary-teal); margin-bottom: 0.75rem; font-size: 1rem;">🎓 Professional Information</h3>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                                <p><strong>Department:</strong> ${staff.department || '-'}</p>
+                                <p><strong>Job Title:</strong> ${staff.jobTitle || '-'}</p>
+                                <p><strong>Education:</strong> ${staff.education || '-'}</p>
+                                <p><strong>Start Date:</strong> ${staff.startDate || '-'}</p>
+                            </div>
+                            <p style="margin-top: 0.5rem;"><strong>Qualifications:</strong> ${staff.qualifications || '-'}</p>
+                            <p><strong>Skills:</strong> ${staff.skills || '-'}</p>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 1.5rem; text-align: right;">
+                        <button class="btn btn-secondary" onclick="document.getElementById('staffDetailsModal').remove()">Close</button>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(modal);
         }
 
         function deleteStaff(index) {
