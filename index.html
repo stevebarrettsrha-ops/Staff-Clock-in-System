@@ -1323,6 +1323,7 @@
                     <table>
                         <thead>
                             <tr>
+                                <th>Date</th>
                                 <th>Time</th>
                                 <th>Activity</th>
                                 <th>Duration</th>
@@ -1331,7 +1332,7 @@
                         </thead>
                         <tbody id="todayLogTable">
                             <tr>
-                                <td colspan="4" style="text-align: center; color: var(--text-secondary);">No activity recorded today</td>
+                                <td colspan="5" style="text-align: center; color: var(--text-secondary);">No activity recorded today</td>
                             </tr>
                         </tbody>
                     </table>
@@ -2292,7 +2293,7 @@
             tbody.innerHTML = '';
 
             if (todayRecords.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-secondary);">No activity recorded today</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-secondary);">No activity recorded today</td></tr>';
                 document.getElementById('todayWorkTime').textContent = '0h 0m';
                 document.getElementById('todayBreakTime').textContent = '0h 0m';
                 document.getElementById('todayNetTime').textContent = '0h 0m';
@@ -2303,9 +2304,12 @@
             let totalBreakSeconds = 0;
 
             todayRecords.forEach(record => {
+                const recordDate = new Date(record.clockIn).toLocaleDateString();
+
                 // Clock In
                 const row1 = tbody.insertRow();
                 row1.innerHTML = `
+                    <td>${recordDate}</td>
                     <td>${new Date(record.clockIn).toLocaleTimeString()}</td>
                     <td><span class="badge badge-success">Clock In</span></td>
                     <td>-</td>
@@ -2316,6 +2320,7 @@
                 record.breaks.forEach(br => {
                     const row = tbody.insertRow();
                     row.innerHTML = `
+                        <td>${recordDate}</td>
                         <td>${new Date(br.start).toLocaleTimeString()}</td>
                         <td><span class="badge badge-warning">Break Start</span></td>
                         <td>${formatSecondsToHoursMinutes(br.duration)}</td>
@@ -2325,6 +2330,7 @@
 
                     const row2 = tbody.insertRow();
                     row2.innerHTML = `
+                        <td>${recordDate}</td>
                         <td>${new Date(br.end).toLocaleTimeString()}</td>
                         <td><span class="badge badge-primary">Break End</span></td>
                         <td>-</td>
@@ -2337,8 +2343,9 @@
                     const row2 = tbody.insertRow();
                     const workTime = (new Date(record.clockOut) - new Date(record.clockIn)) / 1000;
                     totalWorkSeconds += workTime;
-                    
+
                     row2.innerHTML = `
+                        <td>${recordDate}</td>
                         <td>${new Date(record.clockOut).toLocaleTimeString()}</td>
                         <td><span class="badge badge-danger">Clock Out</span></td>
                         <td>${formatSecondsToHoursMinutes(workTime)}</td>
