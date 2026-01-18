@@ -1712,6 +1712,23 @@
                         </div>
                     </div>
 
+                    <!-- Documents Upload -->
+                    <h4 style="color: var(--primary-teal); margin: 1.5rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid var(--border-color);">📁 Documents</h4>
+                    <div class="form-grid">
+                        <div class="form-group" style="grid-column: span 2;">
+                            <label>Upload Documents (PDF only, max 2MB each)</label>
+                            <div style="border: 2px dashed var(--border-color); border-radius: 12px; padding: 1.5rem; text-align: center; background: var(--bg-tertiary);">
+                                <input type="file" id="newStaffDocuments" accept=".pdf" multiple onchange="handleDocumentUpload(event)" style="display: none;">
+                                <label for="newStaffDocuments" style="cursor: pointer; display: block;">
+                                    <span style="font-size: 2rem;">📄</span>
+                                    <p style="margin: 0.5rem 0; color: var(--text-secondary);">Click to upload PDF documents</p>
+                                    <p style="font-size: 0.8rem; color: var(--text-muted);">CV, Certificates, ID, Contracts, etc.</p>
+                                </label>
+                            </div>
+                            <div id="uploadedDocumentsList" style="margin-top: 1rem;"></div>
+                        </div>
+                    </div>
+
                     <div style="margin-top: 1.5rem;">
                         <button class="btn btn-success" onclick="addStaff()">➕ Add Staff Member</button>
                     </div>
@@ -1792,6 +1809,7 @@
         let currentSession = null;
         let timerInterval = null;
         let editingRecordIndex = null;
+        let pendingDocuments = []; // Temporary storage for documents being uploaded
 
         // Initialize default admin
         function initializeDefaultAdmin() {
@@ -2249,6 +2267,165 @@
             });
         }
 
+        // Document Upload Handling
+        function handleDocumentUpload(event) {
+            const files = event.target.files;
+            const maxSize = 2 * 1024 * 1024; // 2MB limit
+
+            for (let file of files) {
+                if (file.type !== 'application/pdf') {
+                    showToast(`${file.name} is not a PDF file`, 'error');
+                    continue;
+                }
+                if (file.size > maxSize) {
+                    showToast(`${file.name} exceeds 2MB limit`, 'error');
+                    continue;
+                }
+
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const docData = {
+                        id: 'DOC_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+                        name: file.name,
+                        size: file.size,
+                        data: e.target.result,
+                        uploadDate: new Date().toISOString()
+                    };
+                    pendingDocuments.push(docData);
+                    renderPendingDocuments();
+                    showToast(`${file.name} added`, 'success');
+                };
+                reader.readAsDataURL(file);
+            }
+            event.target.value = ''; // Reset input
+        }
+
+        function renderPendingDocuments() {
+            const container = document.getElementById('uploadedDocumentsList');
+            if (!container) return;
+
+            if (pendingDocuments.length === 0) {
+                container.innerHTML = '';
+                return;
+            }
+
+            container.innerHTML = `
+                <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 12px; padding: 1rem;">
+                    <h5 style="margin-bottom: 0.75rem; color: var(--text-primary);">📎 Uploaded Documents (${pendingDocuments.length})</h5>
+                    ${pendingDocuments.map((doc, index) => `
+                        <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.5rem; background: var(--bg-tertiary); border-radius: 8px; margin-bottom: 0.5rem;">
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <span style="color: #ef4444;">📄</span>
+                                <span style="font-size: 0.9rem;">${doc.name}</span>
+                                <span style="font-size: 0.75rem; color: var(--text-muted);">(${(doc.size / 1024).toFixed(1)} KB)</span>
+                            </div>
+                            <button onclick="removePendingDocument(${index})" style="background: none; border: none; color: #ef4444; cursor: pointer; font-size: 1.2rem;" title="Remove">×</button>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function removePendingDocument(index) {
+            const docName = pendingDocuments[index].name;
+            pendingDocuments.splice(index, 1);
+            renderPendingDocuments();
+            showToast(`${docName} removed`, 'info');
+        }
+
+        function clearPendingDocuments() {
+            pendingDocuments = [];
+            renderPendingDocuments();
+        }
+
+        // Upload document to existing staff member
+        function uploadDocumentToStaff(staffIndex) {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.pdf';
+            input.multiple = true;
+
+            input.onchange = function(event) {
+                const files = event.target.files;
+                const maxSize = 2 * 1024 * 1024;
+                const staff = staffMembers[staffIndex];
+
+                if (!staff.documents) {
+                    staff.documents = [];
+                }
+
+                for (let file of files) {
+                    if (file.type !== 'application/pdf') {
+                        showToast(`${file.name} is not a PDF file`, 'error');
+                        continue;
+                    }
+                    if (file.size > maxSize) {
+                        showToast(`${file.name} exceeds 2MB limit`, 'error');
+                        continue;
+                    }
+
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        staff.documents.push({
+                            id: 'DOC_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+                            name: file.name,
+                            size: file.size,
+                            data: e.target.result,
+                            uploadDate: new Date().toISOString()
+                        });
+                        saveStaffMembers();
+                        showToast(`${file.name} uploaded to ${staff.fullName}`, 'success');
+
+                        // Refresh the modal if it's open
+                        const modal = document.getElementById('staffDetailsModal');
+                        if (modal) {
+                            modal.remove();
+                            viewStaffDetails(staffIndex);
+                        }
+                    };
+                    reader.readAsDataURL(file);
+                }
+            };
+
+            input.click();
+        }
+
+        function viewDocument(docData, docName) {
+            const newWindow = window.open();
+            newWindow.document.write(`
+                <html>
+                <head><title>${docName}</title></head>
+                <body style="margin:0;padding:0;">
+                    <embed src="${docData}" type="application/pdf" width="100%" height="100%" style="position:absolute;top:0;left:0;right:0;bottom:0;">
+                </body>
+                </html>
+            `);
+        }
+
+        function downloadDocument(docData, docName) {
+            const link = document.createElement('a');
+            link.href = docData;
+            link.download = docName;
+            link.click();
+        }
+
+        function deleteStaffDocument(staffIndex, docIndex) {
+            if (confirm('Are you sure you want to delete this document?')) {
+                const staff = staffMembers[staffIndex];
+                const docName = staff.documents[docIndex].name;
+                staff.documents.splice(docIndex, 1);
+                saveStaffMembers();
+                showToast(`${docName} deleted`, 'success');
+
+                // Refresh the modal
+                const modal = document.getElementById('staffDetailsModal');
+                if (modal) {
+                    modal.remove();
+                    viewStaffDetails(staffIndex);
+                }
+            }
+        }
+
         // Staff Management (Admin)
         function addStaff() {
             if (currentUser.role !== 'Admin') {
@@ -2315,7 +2492,9 @@
                 education: education,
                 startDate: startDate,
                 qualifications: qualifications,
-                skills: skills
+                skills: skills,
+                // Documents
+                documents: [...pendingDocuments]
             };
 
             staffMembers.push(newStaff);
@@ -2341,6 +2520,9 @@
             document.getElementById('newStaffStartDate').value = '';
             document.getElementById('newStaffQualifications').value = '';
             document.getElementById('newStaffSkills').value = '';
+
+            // Clear pending documents
+            clearPendingDocuments();
 
             showToast(`Staff member "${name}" added successfully!`, 'success');
         }
@@ -2385,6 +2567,30 @@
             modal.style.cssText = 'display: flex; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); z-index: 1000; justify-content: center; align-items: center;';
 
             const emergencyContact = staff.emergencyContact || {};
+            const documents = staff.documents || [];
+
+            // Build documents HTML
+            let documentsHTML = '';
+            if (documents.length > 0) {
+                documentsHTML = documents.map((doc, docIndex) => `
+                    <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.75rem; background: var(--bg-secondary); border-radius: 8px; margin-bottom: 0.5rem; border: 1px solid var(--border-color);">
+                        <div style="display: flex; align-items: center; gap: 0.75rem;">
+                            <span style="color: #ef4444; font-size: 1.5rem;">📄</span>
+                            <div>
+                                <p style="margin: 0; font-weight: 600; font-size: 0.9rem;">${doc.name}</p>
+                                <p style="margin: 0; font-size: 0.75rem; color: var(--text-muted);">${(doc.size / 1024).toFixed(1)} KB • Uploaded ${new Date(doc.uploadDate).toLocaleDateString()}</p>
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <button onclick="viewDocument('${doc.data}', '${doc.name}')" class="btn btn-primary" style="padding: 0.4rem 0.75rem; font-size: 0.8rem;">View</button>
+                            <button onclick="downloadDocument('${doc.data}', '${doc.name}')" class="btn btn-success" style="padding: 0.4rem 0.75rem; font-size: 0.8rem;">Download</button>
+                            <button onclick="deleteStaffDocument(${index}, ${docIndex})" class="btn btn-danger" style="padding: 0.4rem 0.75rem; font-size: 0.8rem;">Delete</button>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                documentsHTML = '<p style="color: var(--text-muted); text-align: center; padding: 1rem;">No documents uploaded</p>';
+            }
 
             modal.innerHTML = `
                 <div style="background: var(--bg-secondary); padding: 2rem; border-radius: 24px; max-width: 700px; width: 90%; max-height: 90vh; overflow-y: auto; box-shadow: var(--shadow-xl);">
@@ -2428,6 +2634,14 @@
                             </div>
                             <p style="margin-top: 0.5rem;"><strong>Qualifications:</strong> ${staff.qualifications || '-'}</p>
                             <p><strong>Skills:</strong> ${staff.skills || '-'}</p>
+                        </div>
+
+                        <div style="grid-column: span 2; background: var(--bg-tertiary); padding: 1rem; border-radius: 12px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                                <h3 style="color: var(--primary-teal); font-size: 1rem; margin: 0;">📁 Documents (${documents.length})</h3>
+                                <button onclick="uploadDocumentToStaff(${index})" class="btn btn-primary" style="padding: 0.4rem 0.75rem; font-size: 0.8rem;">📤 Upload PDF</button>
+                            </div>
+                            ${documentsHTML}
                         </div>
                     </div>
 
