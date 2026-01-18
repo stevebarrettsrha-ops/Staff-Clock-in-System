@@ -12,163 +12,235 @@
         }
 
         :root {
-            --primary-blue: #0D47A1;
-            --light-blue: #1565C0;
-            --soft-blue: #E3F2FD;
-            --light-green: #A8D5A5;
-            --medium-green: #66BB6A;
-            --dark-green: #1B5E20;
-            --bg-primary: #f8f9fa;
+            /* Modern Color Palette */
+            --primary-blue: #1e3a8a;
+            --primary-blue-light: #3b82f6;
+            --primary-blue-dark: #1e40af;
+            --light-blue: #60a5fa;
+            --soft-blue: #dbeafe;
+            --accent-indigo: #6366f1;
+            --light-green: #86efac;
+            --medium-green: #22c55e;
+            --dark-green: #166534;
+            --emerald: #10b981;
+            --bg-primary: #f1f5f9;
             --bg-secondary: #ffffff;
-            --text-primary: #333333;
-            --text-secondary: #666666;
-            --border-color: #dee2e6;
-            --danger: #dc3545;
-            --warning: #ffc107;
-            --success: #28a745;
+            --bg-tertiary: #f8fafc;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-muted: #94a3b8;
+            --border-color: #e2e8f0;
+            --border-light: #f1f5f9;
+            --danger: #ef4444;
+            --danger-light: #fca5a5;
+            --warning: #f59e0b;
+            --warning-light: #fcd34d;
+            --success: #22c55e;
+            --success-light: #86efac;
+            --purple: #8b5cf6;
+            --pink: #ec4899;
+
+            /* Shadows */
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+            --shadow-glow: 0 0 20px rgba(59, 130, 246, 0.3);
+
+            /* Glass Effect */
+            --glass-bg: rgba(255, 255, 255, 0.8);
+            --glass-border: rgba(255, 255, 255, 0.5);
+
+            /* Transitions */
+            --transition-fast: 150ms ease;
+            --transition-normal: 250ms ease;
+            --transition-slow: 350ms ease;
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--bg-primary);
+            font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, var(--bg-primary) 0%, #e2e8f0 100%);
             color: var(--text-primary);
             line-height: 1.6;
+            min-height: 100vh;
         }
 
-        /* Dark Mode */
+        /* Dark Mode - Enhanced */
         body.dark-mode {
-            --bg-primary: #1a1a1a;
-            --bg-secondary: #2d2d2d;
-            --text-primary: #e0e0e0;
-            --text-secondary: #b0b0b0;
-            --border-color: #444444;
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-tertiary: #334155;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --border-color: #334155;
+            --border-light: #1e293b;
             --soft-blue: #1e3a5f;
+            --glass-bg: rgba(30, 41, 59, 0.8);
+            --glass-border: rgba(51, 65, 85, 0.5);
         }
 
         .container {
             max-width: 1400px;
             margin: 0 auto;
-            padding: 1rem;
+            padding: 1.5rem;
         }
 
-        /* Login Page */
+        /* Login Page - Modern Glassmorphism */
         .login-container {
             display: flex;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
             padding: 20px;
-            background: linear-gradient(135deg, #0D47A1 0%, #66BB6A 100%);
+            background: linear-gradient(135deg, #1e3a8a 0%, #7c3aed 50%, #22c55e 100%);
+            background-size: 400% 400%;
+            animation: gradientShift 15s ease infinite;
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
         }
 
         .login-box {
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.3);
-            padding: 40px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            box-shadow: var(--shadow-xl), 0 0 40px rgba(0, 0, 0, 0.1);
+            padding: 48px;
             width: 100%;
             max-width: 450px;
-            animation: slideUp 0.5s ease;
+            animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+            border: 1px solid rgba(255, 255, 255, 0.5);
         }
 
         @keyframes slideUp {
             from {
                 opacity: 0;
-                transform: translateY(30px);
+                transform: translateY(40px) scale(0.95);
             }
             to {
                 opacity: 1;
-                transform: translateY(0);
+                transform: translateY(0) scale(1);
             }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
         }
 
         .login-header {
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 36px;
         }
 
         .login-title {
-            font-size: 28px;
-            color: #0D47A1;
-            margin-bottom: 10px;
+            font-size: 32px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #1e3a8a, #7c3aed);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 12px;
+            letter-spacing: -0.5px;
         }
 
         .login-subtitle {
-            color: #666;
+            color: #64748b;
             font-size: 14px;
             margin-bottom: 5px;
+            font-weight: 500;
         }
 
         .input-group {
-            margin-bottom: 20px;
+            margin-bottom: 24px;
         }
 
         .input-group label {
             display: block;
             margin-bottom: 8px;
-            color: #333;
-            font-weight: 500;
+            color: var(--text-primary);
+            font-weight: 600;
             font-size: 14px;
+            letter-spacing: -0.2px;
         }
 
         .login-input {
             width: 100%;
-            padding: 12px 15px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 14px;
-            transition: all 0.3s ease;
+            padding: 14px 18px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 15px;
+            transition: all var(--transition-normal);
+            background: #f8fafc;
         }
 
         .login-input:focus {
             outline: none;
-            border-color: #0D47A1;
-            box-shadow: 0 0 0 3px rgba(13, 71, 161, 0.1);
+            border-color: var(--primary-blue-light);
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15);
+            background: white;
         }
 
         .login-btn {
             width: 100%;
-            padding: 14px;
-            background: linear-gradient(135deg, #0D47A1 0%, #66BB6A 100%);
+            padding: 16px;
+            background: linear-gradient(135deg, #1e3a8a 0%, #7c3aed 100%);
             color: white;
             border: none;
-            border-radius: 8px;
+            border-radius: 12px;
             font-size: 16px;
-            font-weight: 600;
+            font-weight: 700;
             cursor: pointer;
-            transition: transform 0.2s ease;
+            transition: all var(--transition-normal);
+            letter-spacing: 0.3px;
         }
 
         .login-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(13, 71, 161, 0.4);
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(30, 58, 138, 0.4);
+        }
+
+        .login-btn:active {
+            transform: translateY(-1px);
         }
 
         .login-error {
-            background: #fee;
-            color: #c33;
-            padding: 12px;
-            border-radius: 6px;
+            background: linear-gradient(135deg, #fef2f2, #fee2e2);
+            color: #dc2626;
+            padding: 14px 18px;
+            border-radius: 12px;
             margin-bottom: 20px;
             font-size: 14px;
             display: none;
-            border-left: 4px solid #c33;
+            border-left: 4px solid #dc2626;
+            font-weight: 500;
         }
 
-        /* Header */
+        /* Header - Modern Card Design */
         .header {
-            background: var(--bg-secondary);
-            padding: 1.5rem;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            padding: 1.5rem 2rem;
+            box-shadow: var(--shadow-lg);
             margin-bottom: 2rem;
-            border-radius: 0.5rem;
+            border-radius: 20px;
+            border: 1px solid var(--glass-border);
         }
 
         .header-top {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 1rem;
+            margin-bottom: 0.5rem;
         }
 
         .header-logo {
@@ -182,66 +254,107 @@
         }
 
         .header-title h1 {
-            color: var(--primary-blue);
-            font-size: 1.8rem;
-            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, var(--primary-blue), var(--accent-indigo));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-size: 1.75rem;
+            font-weight: 800;
+            margin-bottom: 0.25rem;
+            letter-spacing: -0.5px;
         }
 
         .tagline {
-            color: var(--medium-green);
-            font-size: 1.2rem;
-            font-weight: 600;
+            color: var(--emerald);
+            font-size: 1rem;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
         }
 
         .subtitle {
             color: var(--text-secondary);
-            font-size: 1rem;
+            font-size: 0.9rem;
+            font-weight: 500;
         }
 
-        /* Current Status Card */
+        /* Current Status Card - Glassmorphism */
         .status-card {
-            background: var(--bg-secondary);
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
             padding: 2rem;
-            border-radius: 0.5rem;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border-radius: 24px;
+            box-shadow: var(--shadow-lg);
             margin-bottom: 2rem;
+            border: 1px solid var(--glass-border);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .status-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary-blue), var(--accent-indigo), var(--emerald));
+        }
+
+        .status-card h2 {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
         }
 
         .status-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1.5rem;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.25rem;
             margin-bottom: 1.5rem;
         }
 
         .status-item {
             text-align: center;
-            padding: 1rem;
-            background: var(--soft-blue);
-            border-radius: 0.5rem;
+            padding: 1.25rem;
+            background: linear-gradient(135deg, var(--soft-blue), rgba(147, 197, 253, 0.3));
+            border-radius: 16px;
+            border: 1px solid rgba(59, 130, 246, 0.1);
+            transition: all var(--transition-normal);
+        }
+
+        .status-item:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
         }
 
         .status-label {
-            font-size: 0.9rem;
+            font-size: 0.8rem;
             color: var(--text-secondary);
             margin-bottom: 0.5rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         .status-value {
-            font-size: 1.8rem;
-            font-weight: bold;
+            font-size: 1.75rem;
+            font-weight: 800;
             color: var(--primary-blue);
+            letter-spacing: -0.5px;
         }
 
         .status-value.active {
             color: var(--success);
+            animation: pulse 2s ease-in-out infinite;
         }
 
         .status-value.break {
             color: var(--warning);
         }
 
-        /* Action Buttons */
+        /* Action Buttons - Modern Style */
         .action-buttons {
             display: flex;
             gap: 1rem;
@@ -250,92 +363,137 @@
         }
 
         .btn {
-            padding: 0.8rem 1.5rem;
+            padding: 0.875rem 1.75rem;
             border: none;
-            border-radius: 0.5rem;
-            font-size: 1rem;
-            font-weight: 600;
+            border-radius: 12px;
+            font-size: 0.95rem;
+            font-weight: 700;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all var(--transition-normal);
             display: inline-flex;
             align-items: center;
             gap: 0.5rem;
+            letter-spacing: 0.2px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .btn:hover::before {
+            left: 100%;
         }
 
         .btn-primary {
-            background: var(--primary-blue);
+            background: linear-gradient(135deg, var(--primary-blue), var(--primary-blue-light));
             color: white;
+            box-shadow: 0 4px 15px rgba(30, 58, 138, 0.3);
         }
 
         .btn-primary:hover {
-            background: var(--light-blue);
-            transform: translateY(-2px);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(30, 58, 138, 0.4);
         }
 
         .btn-success {
-            background: var(--success);
+            background: linear-gradient(135deg, #16a34a, #22c55e);
             color: white;
+            box-shadow: 0 4px 15px rgba(34, 197, 94, 0.3);
         }
 
         .btn-success:hover {
-            background: #218838;
-            transform: translateY(-2px);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(34, 197, 94, 0.4);
         }
 
         .btn-warning {
-            background: var(--warning);
-            color: #333;
+            background: linear-gradient(135deg, #d97706, #f59e0b);
+            color: white;
+            box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
         }
 
         .btn-warning:hover {
-            background: #e0a800;
-            transform: translateY(-2px);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(245, 158, 11, 0.4);
         }
 
         .btn-danger {
-            background: var(--danger);
+            background: linear-gradient(135deg, #dc2626, #ef4444);
             color: white;
+            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
         }
 
         .btn-danger:hover {
-            background: #c82333;
-            transform: translateY(-2px);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(239, 68, 68, 0.4);
         }
 
         .btn-secondary {
-            background: #6c757d;
+            background: linear-gradient(135deg, #475569, #64748b);
             color: white;
+            box-shadow: 0 4px 15px rgba(71, 85, 105, 0.3);
         }
 
         .btn-secondary:hover {
-            background: #5a6268;
-            transform: translateY(-2px);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(71, 85, 105, 0.4);
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 2px solid var(--primary-blue);
+            color: var(--primary-blue);
+        }
+
+        .btn-outline:hover {
+            background: var(--primary-blue);
+            color: white;
+            transform: translateY(-3px);
         }
 
         .btn:disabled {
             opacity: 0.5;
             cursor: not-allowed;
+            transform: none !important;
+            box-shadow: none !important;
         }
 
-        /* Navigation Tabs */
+        .btn:disabled::before {
+            display: none;
+        }
+
+        /* Navigation Tabs - Modern Pill Style */
         .nav-tabs {
             display: flex;
             gap: 0.5rem;
             margin-bottom: 2rem;
-            border-bottom: 2px solid var(--border-color);
+            padding: 0.5rem;
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            box-shadow: var(--shadow-sm);
             flex-wrap: wrap;
+            border: 1px solid var(--border-color);
         }
 
         .nav-tab {
-            padding: 0.8rem 1.5rem;
+            padding: 0.75rem 1.25rem;
             background: transparent;
             border: none;
-            border-bottom: 3px solid transparent;
+            border-radius: 12px;
             color: var(--text-secondary);
             cursor: pointer;
-            font-size: 1rem;
+            font-size: 0.9rem;
             font-weight: 600;
-            transition: all 0.3s ease;
+            transition: all var(--transition-normal);
         }
 
         .nav-tab:hover {
@@ -344,94 +502,167 @@
         }
 
         .nav-tab.active {
-            color: var(--primary-blue);
-            border-bottom-color: var(--primary-blue);
+            color: white;
+            background: linear-gradient(135deg, var(--primary-blue), var(--accent-indigo));
+            box-shadow: var(--shadow-md);
         }
 
         /* Module */
         .module {
             display: none;
+            animation: fadeIn 0.3s ease;
         }
 
         .module.active {
             display: block;
         }
 
-        /* Table */
+        /* Table - Modern Design */
         .table-container {
             background: var(--bg-secondary);
             padding: 1.5rem;
-            border-radius: 0.5rem;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border-radius: 20px;
+            box-shadow: var(--shadow-md);
             overflow-x: auto;
+            border: 1px solid var(--border-color);
+        }
+
+        .table-container h3 {
+            color: var(--text-primary);
+            font-weight: 700;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
         }
 
         table {
             width: 100%;
-            border-collapse: collapse;
+            border-collapse: separate;
+            border-spacing: 0;
         }
 
         th {
-            background: var(--primary-blue);
+            background: linear-gradient(135deg, var(--primary-blue), var(--primary-blue-dark));
             color: white;
-            padding: 1rem;
+            padding: 1rem 1.25rem;
             text-align: left;
-            font-weight: 600;
+            font-weight: 700;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        th:first-child {
+            border-radius: 12px 0 0 0;
+        }
+
+        th:last-child {
+            border-radius: 0 12px 0 0;
         }
 
         td {
-            padding: 0.8rem 1rem;
-            border-bottom: 1px solid var(--border-color);
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--border-light);
+            font-size: 0.95rem;
+            color: var(--text-primary);
         }
 
-        tr:hover {
-            background: var(--soft-blue);
+        tbody tr {
+            transition: all var(--transition-fast);
         }
 
-        /* Stats Cards */
+        tbody tr:hover {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.05), rgba(99, 102, 241, 0.05));
+        }
+
+        tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        tbody tr:last-child td:first-child {
+            border-radius: 0 0 0 12px;
+        }
+
+        tbody tr:last-child td:last-child {
+            border-radius: 0 0 12px 0;
+        }
+
+        /* Stats Cards - Modern Gradient */
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1.5rem;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.25rem;
             margin-bottom: 2rem;
         }
 
         .stat-card {
-            background: var(--light-green);
+            background: linear-gradient(135deg, #dcfce7, #bbf7d0);
             padding: 1.5rem;
-            border-radius: 0.5rem;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border-radius: 16px;
+            box-shadow: var(--shadow-md);
+            border: 1px solid rgba(34, 197, 94, 0.2);
+            transition: all var(--transition-normal);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 100px;
+            height: 100px;
+            background: rgba(34, 197, 94, 0.1);
+            border-radius: 50%;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-lg);
         }
 
         .stat-label {
-            font-size: 0.9rem;
+            font-size: 0.8rem;
             color: var(--dark-green);
             margin-bottom: 0.5rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         .stat-value {
             font-size: 2rem;
-            font-weight: bold;
+            font-weight: 800;
             color: var(--dark-green);
+            letter-spacing: -0.5px;
         }
 
-        /* Form */
+        /* Form - Modern Styling */
         .form-section {
             background: var(--bg-secondary);
-            padding: 1.5rem;
-            border-radius: 0.5rem;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 1.75rem;
+            border-radius: 20px;
+            box-shadow: var(--shadow-md);
             margin-bottom: 2rem;
+            border: 1px solid var(--border-color);
+        }
+
+        .form-section h3 {
+            color: var(--text-primary);
+            font-weight: 700;
+            margin-bottom: 1.25rem;
         }
 
         .form-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1rem;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.25rem;
         }
 
         .form-group {
-            margin-bottom: 1rem;
+            margin-bottom: 0.5rem;
         }
 
         .form-group label {
@@ -439,88 +670,113 @@
             margin-bottom: 0.5rem;
             font-weight: 600;
             color: var(--text-primary);
+            font-size: 0.9rem;
         }
 
         .form-group input,
         .form-group select {
             width: 100%;
-            padding: 0.6rem;
-            border: 1px solid var(--border-color);
-            border-radius: 0.25rem;
-            font-size: 1rem;
-            background: var(--bg-primary);
+            padding: 0.75rem 1rem;
+            border: 2px solid var(--border-color);
+            border-radius: 10px;
+            font-size: 0.95rem;
+            background: var(--bg-tertiary);
             color: var(--text-primary);
+            transition: all var(--transition-normal);
         }
 
-        /* Badge */
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--primary-blue-light);
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+            background: var(--bg-secondary);
+        }
+
+        /* Badge - Modern Pills */
         .badge {
-            display: inline-block;
-            padding: 0.3rem 0.8rem;
-            border-radius: 1rem;
-            font-size: 0.85rem;
-            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            padding: 0.35rem 0.85rem;
+            border-radius: 50px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            letter-spacing: 0.2px;
         }
 
         .badge-success {
-            background: #d4edda;
-            color: #155724;
+            background: linear-gradient(135deg, #dcfce7, #bbf7d0);
+            color: #166534;
         }
 
         .badge-warning {
-            background: #fff3cd;
-            color: #856404;
+            background: linear-gradient(135deg, #fef3c7, #fde68a);
+            color: #92400e;
         }
 
         .badge-danger {
-            background: #f8d7da;
-            color: #721c24;
+            background: linear-gradient(135deg, #fee2e2, #fecaca);
+            color: #991b1b;
         }
 
         .badge-primary {
-            background: #cce5ff;
-            color: #004085;
+            background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+            color: #1e40af;
+        }
+
+        .badge-purple {
+            background: linear-gradient(135deg, #ede9fe, #ddd6fe);
+            color: #6b21a8;
         }
 
         /* Logout Button */
         .logout-btn {
-            background: var(--danger);
+            background: linear-gradient(135deg, #dc2626, #ef4444);
             color: white;
             border: none;
-            padding: 0.5rem 1rem;
-            border-radius: 0.5rem;
+            padding: 0.6rem 1.25rem;
+            border-radius: 10px;
             cursor: pointer;
             font-size: 0.9rem;
+            font-weight: 600;
             display: flex;
             align-items: center;
             gap: 0.5rem;
+            transition: all var(--transition-normal);
+            box-shadow: 0 2px 10px rgba(239, 68, 68, 0.2);
         }
 
         .logout-btn:hover {
-            background: #c82333;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
         }
 
         /* Theme Toggle */
         .theme-toggle-btn {
-            background: var(--primary-blue);
+            background: linear-gradient(135deg, var(--primary-blue), var(--accent-indigo));
             color: white;
             border: none;
-            padding: 0.5rem 1rem;
-            border-radius: 0.5rem;
+            padding: 0.6rem 1.25rem;
+            border-radius: 10px;
             cursor: pointer;
             font-size: 0.9rem;
+            font-weight: 600;
             display: flex;
             align-items: center;
             gap: 0.5rem;
+            transition: all var(--transition-normal);
+            box-shadow: 0 2px 10px rgba(30, 58, 138, 0.2);
         }
 
         .theme-toggle-btn:hover {
-            background: var(--light-blue);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(30, 58, 138, 0.3);
         }
 
         /* Responsive */
         @media (max-width: 768px) {
             .header-title h1 {
-                font-size: 1.3rem;
+                font-size: 1.25rem;
             }
 
             .stats-grid {
@@ -535,29 +791,400 @@
                 width: 100%;
                 justify-content: center;
             }
+
+            .header-top {
+                flex-direction: column;
+                gap: 1rem;
+            }
         }
 
-        /* Current Timer Display */
+        /* Current Timer Display - Modern Style */
         .timer-display {
-            background: linear-gradient(135deg, var(--primary-blue), var(--medium-green));
+            background: linear-gradient(135deg, var(--primary-blue), #7c3aed, var(--emerald));
+            background-size: 200% 200%;
+            animation: gradientShift 8s ease infinite;
             color: white;
-            padding: 2rem;
-            border-radius: 0.5rem;
+            padding: 2.5rem;
+            border-radius: 20px;
             text-align: center;
             margin-bottom: 2rem;
+            box-shadow: var(--shadow-xl);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .timer-display::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+            opacity: 0.5;
         }
 
         .timer-display h2 {
-            font-size: 3rem;
+            font-size: 4rem;
             margin: 0;
-            font-weight: bold;
-            letter-spacing: 2px;
+            font-weight: 800;
+            letter-spacing: 4px;
+            text-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+            position: relative;
         }
 
         .timer-label {
             font-size: 1rem;
             opacity: 0.9;
-            margin-top: 0.5rem;
+            margin-top: 0.75rem;
+            font-weight: 600;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            position: relative;
+        }
+
+        /* Report Summary Panel */
+        .report-summary {
+            background: linear-gradient(135deg, #1e3a8a, #7c3aed);
+            color: white;
+            padding: 2rem;
+            border-radius: 20px;
+            margin-bottom: 1.5rem;
+            display: none;
+        }
+
+        .report-summary.visible {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .report-summary-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .report-summary-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+        }
+
+        .report-date-range {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .report-summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .report-summary-item {
+            text-align: center;
+        }
+
+        .report-summary-label {
+            font-size: 0.75rem;
+            opacity: 0.8;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 0.5rem;
+        }
+
+        .report-summary-value {
+            font-size: 1.75rem;
+            font-weight: 800;
+        }
+
+        /* Report Actions Bar */
+        .report-actions {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .btn-icon {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Print Styles */
+        @media print {
+            body {
+                background: white !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            .login-container,
+            .logout-btn,
+            .theme-toggle-btn,
+            .nav-tabs,
+            .status-card,
+            .form-section,
+            .action-buttons,
+            .report-actions,
+            #editTimeModal,
+            .btn {
+                display: none !important;
+            }
+
+            .container {
+                max-width: 100% !important;
+                padding: 0 !important;
+            }
+
+            .header {
+                background: white !important;
+                box-shadow: none !important;
+                border: none !important;
+                padding: 1rem 0 !important;
+                margin-bottom: 1rem !important;
+            }
+
+            .module {
+                display: none !important;
+            }
+
+            .module.active {
+                display: block !important;
+            }
+
+            /* Print Header */
+            .print-header {
+                display: block !important;
+                text-align: center;
+                padding: 2rem 0;
+                border-bottom: 3px solid #1e3a8a;
+                margin-bottom: 1.5rem;
+            }
+
+            .print-header-logo {
+                font-size: 2rem;
+                font-weight: 800;
+                color: #1e3a8a;
+                margin-bottom: 0.5rem;
+            }
+
+            .print-header-company {
+                font-size: 1rem;
+                color: #64748b;
+                margin-bottom: 0.25rem;
+            }
+
+            .print-header-title {
+                font-size: 1.5rem;
+                font-weight: 700;
+                color: #1e293b;
+                margin-top: 1rem;
+            }
+
+            .print-header-date {
+                font-size: 0.9rem;
+                color: #64748b;
+                margin-top: 0.5rem;
+            }
+
+            /* Print Summary */
+            .print-summary {
+                display: grid !important;
+                grid-template-columns: repeat(4, 1fr);
+                gap: 1rem;
+                padding: 1.5rem;
+                background: #f8fafc !important;
+                border: 1px solid #e2e8f0;
+                border-radius: 8px;
+                margin-bottom: 1.5rem;
+            }
+
+            .print-summary-item {
+                text-align: center;
+                padding: 1rem;
+            }
+
+            .print-summary-label {
+                font-size: 0.75rem;
+                color: #64748b;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }
+
+            .print-summary-value {
+                font-size: 1.25rem;
+                font-weight: 700;
+                color: #1e293b;
+                margin-top: 0.25rem;
+            }
+
+            /* Print Table */
+            .table-container {
+                background: white !important;
+                box-shadow: none !important;
+                padding: 0 !important;
+                border: none !important;
+            }
+
+            table {
+                width: 100%;
+                border-collapse: collapse;
+            }
+
+            th {
+                background: #1e3a8a !important;
+                color: white !important;
+                padding: 0.75rem !important;
+                font-size: 0.75rem !important;
+                border: 1px solid #1e3a8a !important;
+            }
+
+            td {
+                padding: 0.6rem 0.75rem !important;
+                font-size: 0.85rem !important;
+                border: 1px solid #e2e8f0 !important;
+            }
+
+            tbody tr:nth-child(even) {
+                background: #f8fafc !important;
+            }
+
+            .badge {
+                padding: 0.2rem 0.5rem !important;
+                font-size: 0.7rem !important;
+            }
+
+            /* Print Footer */
+            .print-footer {
+                display: block !important;
+                margin-top: 2rem;
+                padding-top: 1.5rem;
+                border-top: 2px solid #e2e8f0;
+            }
+
+            .print-footer-row {
+                display: flex;
+                justify-content: space-between;
+                margin-bottom: 2rem;
+            }
+
+            .print-signature {
+                width: 200px;
+                text-align: center;
+            }
+
+            .print-signature-line {
+                border-top: 1px solid #1e293b;
+                margin-top: 3rem;
+                padding-top: 0.5rem;
+                font-size: 0.85rem;
+                color: #64748b;
+            }
+
+            .print-generated {
+                text-align: center;
+                font-size: 0.75rem;
+                color: #94a3b8;
+                margin-top: 1rem;
+            }
+
+            /* Hide non-essential elements */
+            h2[style*="color"] {
+                display: none !important;
+            }
+
+            .report-summary {
+                display: none !important;
+            }
+        }
+
+        /* Print Header (hidden on screen) */
+        .print-header,
+        .print-summary,
+        .print-footer {
+            display: none;
+        }
+
+        /* Toast Notifications */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            padding: 1rem 1.5rem;
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            box-shadow: var(--shadow-xl);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            z-index: 10000;
+            animation: slideInRight 0.3s ease;
+            border-left: 4px solid var(--success);
+        }
+
+        @keyframes slideInRight {
+            from {
+                opacity: 0;
+                transform: translateX(100px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .toast-success {
+            border-left-color: var(--success);
+        }
+
+        .toast-error {
+            border-left-color: var(--danger);
+        }
+
+        .toast-warning {
+            border-left-color: var(--warning);
+        }
+
+        /* Loading Spinner */
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Skeleton Loading */
+        .skeleton {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+            border-radius: 4px;
+        }
+
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+
+        /* Totals Row */
+        .totals-row {
+            background: linear-gradient(135deg, #f0fdf4, #dcfce7) !important;
+            font-weight: 700;
+        }
+
+        .totals-row td {
+            border-top: 2px solid var(--success) !important;
         }
     </style>
 </head>
@@ -754,8 +1381,17 @@
             <!-- Reports Module (Admin) -->
             <div id="reports" class="module">
                 <h2 style="color: var(--primary-blue); margin-bottom: 1.5rem;">📈 Staff Reports</h2>
-                
+
+                <!-- Print Header (only visible when printing) -->
+                <div class="print-header" id="printHeader">
+                    <div class="print-header-logo">CESTIS</div>
+                    <div class="print-header-company">Community Educational and Skills Training Institute and Services Limited</div>
+                    <div class="print-header-title">Staff Time Attendance Report</div>
+                    <div class="print-header-date" id="printDateRange"></div>
+                </div>
+
                 <div class="form-section">
+                    <h3 style="margin-bottom: 1rem;">Generate Report</h3>
                     <div class="form-grid">
                         <div class="form-group">
                             <label>Select Staff</label>
@@ -777,8 +1413,76 @@
                     </div>
                 </div>
 
+                <!-- Report Summary Panel -->
+                <div class="report-summary" id="reportSummary">
+                    <div class="report-summary-header">
+                        <div class="report-summary-title">📊 Report Summary</div>
+                        <div class="report-date-range" id="summaryDateRange"></div>
+                    </div>
+                    <div class="report-summary-grid">
+                        <div class="report-summary-item">
+                            <div class="report-summary-label">Total Records</div>
+                            <div class="report-summary-value" id="summaryTotalRecords">0</div>
+                        </div>
+                        <div class="report-summary-item">
+                            <div class="report-summary-label">Total Work Hours</div>
+                            <div class="report-summary-value" id="summaryTotalWork">0h 0m</div>
+                        </div>
+                        <div class="report-summary-item">
+                            <div class="report-summary-label">Total Break Time</div>
+                            <div class="report-summary-value" id="summaryTotalBreak">0h 0m</div>
+                        </div>
+                        <div class="report-summary-item">
+                            <div class="report-summary-label">Net Work Time</div>
+                            <div class="report-summary-value" id="summaryNetWork">0h 0m</div>
+                        </div>
+                        <div class="report-summary-item">
+                            <div class="report-summary-label">Avg Daily Hours</div>
+                            <div class="report-summary-value" id="summaryAvgDaily">0h 0m</div>
+                        </div>
+                        <div class="report-summary-item">
+                            <div class="report-summary-label">Employees</div>
+                            <div class="report-summary-value" id="summaryEmployees">0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Report Actions -->
+                <div class="report-actions" id="reportActions" style="display: none;">
+                    <button class="btn btn-success btn-icon" onclick="exportReportCSV()">
+                        <span>📥</span> Export CSV
+                    </button>
+                    <button class="btn btn-primary btn-icon" onclick="printReport()">
+                        <span>🖨️</span> Print Report
+                    </button>
+                    <button class="btn btn-secondary btn-icon" onclick="exportReportPDF()">
+                        <span>📄</span> Save as PDF
+                    </button>
+                </div>
+
+                <!-- Print Summary (only visible when printing) -->
+                <div class="print-summary" id="printSummary">
+                    <div class="print-summary-item">
+                        <div class="print-summary-label">Total Records</div>
+                        <div class="print-summary-value" id="printTotalRecords">0</div>
+                    </div>
+                    <div class="print-summary-item">
+                        <div class="print-summary-label">Total Work Hours</div>
+                        <div class="print-summary-value" id="printTotalWork">0h 0m</div>
+                    </div>
+                    <div class="print-summary-item">
+                        <div class="print-summary-label">Total Break Time</div>
+                        <div class="print-summary-value" id="printTotalBreak">0h 0m</div>
+                    </div>
+                    <div class="print-summary-item">
+                        <div class="print-summary-label">Net Work Time</div>
+                        <div class="print-summary-value" id="printNetWork">0h 0m</div>
+                    </div>
+                </div>
+
                 <div class="table-container">
-                    <table>
+                    <h3 style="margin-bottom: 1rem;">📋 Detailed Records</h3>
+                    <table id="reportsTableFull">
                         <thead>
                             <tr>
                                 <th>Employee</th>
@@ -796,7 +1500,31 @@
                                 <td colspan="8" style="text-align: center; color: var(--text-secondary);">Generate a report to view data</td>
                             </tr>
                         </tbody>
+                        <tfoot id="reportsTfoot" style="display: none;">
+                            <tr class="totals-row">
+                                <td colspan="5" style="text-align: right; font-weight: 700;">TOTALS:</td>
+                                <td id="totalWorkTimeCell">0h 0m</td>
+                                <td id="totalBreakTimeCell">0h 0m</td>
+                                <td id="totalNetTimeCell">0h 0m</td>
+                            </tr>
+                        </tfoot>
                     </table>
+                </div>
+
+                <!-- Print Footer (only visible when printing) -->
+                <div class="print-footer" id="printFooter">
+                    <div class="print-footer-row">
+                        <div class="print-signature">
+                            <div class="print-signature-line">Prepared By</div>
+                        </div>
+                        <div class="print-signature">
+                            <div class="print-signature-line">Verified By</div>
+                        </div>
+                        <div class="print-signature">
+                            <div class="print-signature-line">Approved By</div>
+                        </div>
+                    </div>
+                    <div class="print-generated" id="printGeneratedDate"></div>
                 </div>
             </div>
 
@@ -911,17 +1639,17 @@
     </div>
 
     <!-- Edit Time Record Modal -->
-    <div id="editTimeModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
-        <div style="background: var(--bg-secondary); padding: 2rem; border-radius: 0.5rem; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto;">
-            <h2 style="color: var(--primary-blue); margin-bottom: 1.5rem;">✏️ Edit Time Record</h2>
-            
-            <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 1rem; margin-bottom: 1.5rem;">
-                <strong>⚠️ Warning:</strong> Editing time records affects payroll calculations. Ensure accuracy before saving.
+    <div id="editTimeModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); z-index: 1000; justify-content: center; align-items: center;">
+        <div style="background: var(--bg-secondary); padding: 2rem; border-radius: 24px; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto; box-shadow: var(--shadow-xl); animation: slideUp 0.3s ease;">
+            <h2 style="background: linear-gradient(135deg, var(--primary-blue), var(--accent-indigo)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 1.5rem; font-weight: 800;">Edit Time Record</h2>
+
+            <div style="background: linear-gradient(135deg, #fef3c7, #fde68a); border-left: 4px solid #f59e0b; padding: 1rem 1.25rem; margin-bottom: 1.5rem; border-radius: 12px;">
+                <strong style="color: #92400e;">Warning:</strong> <span style="color: #78350f;">Editing time records affects payroll calculations. Ensure accuracy before saving.</span>
             </div>
 
             <div class="form-group">
                 <label>Employee</label>
-                <input type="text" id="editRecordStaff" disabled style="background: #f0f0f0;">
+                <input type="text" id="editRecordStaff" disabled style="background: var(--bg-tertiary); opacity: 0.7;">
             </div>
 
             <div class="form-group">
@@ -944,12 +1672,12 @@
                 <div id="editBreaksList" style="margin-top: 0.5rem;">
                     <!-- Break entries will be added here -->
                 </div>
-                <button class="btn btn-secondary" onclick="addBreakToEdit()" style="margin-top: 0.5rem; font-size: 0.9rem; padding: 0.4rem 0.8rem;">+ Add Break</button>
+                <button class="btn btn-secondary" onclick="addBreakToEdit()" style="margin-top: 0.75rem; font-size: 0.85rem; padding: 0.5rem 1rem;">+ Add Break</button>
             </div>
 
-            <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
-                <button class="btn btn-success" onclick="saveTimeRecordEdit()">💾 Save Changes</button>
-                <button class="btn btn-secondary" onclick="closeEditTimeModal()">❌ Cancel</button>
+            <div style="display: flex; gap: 1rem; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--border-color);">
+                <button class="btn btn-success" onclick="saveTimeRecordEdit()">Save Changes</button>
+                <button class="btn btn-secondary" onclick="closeEditTimeModal()">Cancel</button>
             </div>
         </div>
     </div>
@@ -1011,19 +1739,21 @@
             if (staff) {
                 currentUser = staff;
                 sessionStorage.setItem('cestisCurrentUser', JSON.stringify(staff));
-                
+
                 document.getElementById('loginPage').style.display = 'none';
                 document.getElementById('mainDashboard').style.display = 'block';
                 document.getElementById('currentUserDisplay').textContent = `👤 ${staff.fullName} (${staff.workType})`;
-                
+
                 updateUIForRole();
                 loadTodaysSession();
                 renderTodayLog();
                 renderHistory();
-                
+
+                setTimeout(() => showToast(`Welcome back, ${staff.fullName}!`, 'success'), 300);
+
             } else {
                 const errorDiv = document.getElementById('loginError');
-                errorDiv.textContent = '❌ Invalid credentials';
+                errorDiv.textContent = 'Invalid username or password';
                 errorDiv.style.display = 'block';
                 setTimeout(() => errorDiv.style.display = 'none', 3000);
             }
@@ -1032,7 +1762,7 @@
         // Logout
         function handleLogout() {
             if (currentSession && currentSession.status !== 'completed') {
-                alert('⚠️ Please clock out before logging out');
+                showToast('Please clock out before logging out', 'warning');
                 return;
             }
             
@@ -1076,12 +1806,12 @@
         // Clock In
         function clockIn() {
             if (currentUser.role === 'Viewer') {
-                alert('⚠️ Viewers cannot clock in. This is a view-only account.');
+                showToast('Viewers cannot clock in. This is a view-only account.', 'warning');
                 return;
             }
 
             if (currentSession && currentSession.status !== 'completed') {
-                alert('You are already clocked in!');
+                showToast('You are already clocked in!', 'warning');
                 return;
             }
 
@@ -1106,13 +1836,13 @@
             startTimer();
             renderTodayLog();
 
-            alert('✅ Clocked in successfully!');
+            showToast('Clocked in successfully! Have a productive day.', 'success');
         }
 
         // Start Break
         function startBreak() {
             if (!currentSession || currentSession.status !== 'working') {
-                alert('You must be clocked in to take a break');
+                showToast('You must be clocked in to take a break', 'warning');
                 return;
             }
 
@@ -1123,13 +1853,13 @@
             updateClockInterface();
             renderTodayLog();
 
-            alert('☕ Break started');
+            showToast('Break started. Enjoy your rest!', 'info');
         }
 
         // End Break
         function endBreak() {
             if (!currentSession || currentSession.status !== 'break') {
-                alert('You are not on break');
+                showToast('You are not on break', 'warning');
                 return;
             }
 
@@ -1150,18 +1880,18 @@
             updateClockInterface();
             renderTodayLog();
 
-            alert('▶️ Break ended. Back to work!');
+            showToast('Break ended. Back to work!', 'success');
         }
 
         // Clock Out
         function clockOut() {
             if (!currentSession || currentSession.status === 'completed') {
-                alert('You are not clocked in');
+                showToast('You are not clocked in', 'warning');
                 return;
             }
 
             if (currentSession.status === 'break') {
-                alert('⚠️ Please end your break before clocking out');
+                showToast('Please end your break before clocking out', 'warning');
                 return;
             }
 
@@ -1175,7 +1905,7 @@
                 renderTodayLog();
                 renderHistory();
 
-                alert('🏁 Clocked out successfully!');
+                showToast('Clocked out successfully! Great work today.', 'success');
             }
         }
 
@@ -1420,7 +2150,7 @@
         // Staff Management (Admin)
         function addStaff() {
             if (currentUser.role !== 'Admin') {
-                alert('⚠️ Admin access required');
+                showToast('Admin access required', 'error');
                 return;
             }
 
@@ -1431,12 +2161,12 @@
             const role = document.getElementById('newStaffRole').value;
 
             if (!name || !username || !password) {
-                alert('Please fill in all required fields');
+                showToast('Please fill in all required fields', 'warning');
                 return;
             }
 
             if (staffMembers.find(s => s.username === username)) {
-                alert('❌ Username already exists');
+                showToast('Username already exists', 'error');
                 return;
             }
 
@@ -1461,7 +2191,7 @@
             document.getElementById('newStaffUsername').value = '';
             document.getElementById('newStaffPassword').value = '';
 
-            alert('✅ Staff member added successfully!');
+            showToast(`Staff member "${name}" added successfully!`, 'success');
         }
 
         function renderStaffTable() {
@@ -1495,12 +2225,13 @@
 
         function deleteStaff(index) {
             if (confirm('Are you sure you want to delete this staff member?')) {
+                const deletedName = staffMembers[index].fullName;
                 staffMembers.splice(index, 1);
                 saveStaffMembers();
                 renderStaffTable();
                 populateStaffSelect();
                 populateEditStaffSelect();
-                alert('✅ Staff member deleted');
+                showToast(`Staff member "${deletedName}" deleted`, 'success');
             }
         }
 
@@ -1531,7 +2262,7 @@
         // Edit Time Records Functions (Admin Only)
         function loadEditableRecords() {
             if (currentUser.role !== 'Admin') {
-                alert('⚠️ Admin access required');
+                showToast('Admin access required', 'error');
                 return;
             }
 
@@ -1540,7 +2271,7 @@
             const toDate = document.getElementById('editToDate').value;
 
             if (!staffId) {
-                alert('Please select a staff member');
+                showToast('Please select a staff member', 'warning');
                 return;
             }
 
@@ -1584,7 +2315,7 @@
 
         function openEditTimeModal(index) {
             if (currentUser.role !== 'Admin') {
-                alert('⚠️ Admin access required');
+                showToast('Admin access required', 'error');
                 return;
             }
 
@@ -1655,7 +2386,7 @@
 
         function saveTimeRecordEdit() {
             if (currentUser.role !== 'Admin') {
-                alert('⚠️ Admin access required');
+                showToast('Admin access required', 'error');
                 return;
             }
 
@@ -1667,7 +2398,7 @@
             const clockOutTime = document.getElementById('editRecordClockOut').value;
 
             if (!date || !clockInTime) {
-                alert('Date and Clock In time are required');
+                showToast('Date and Clock In time are required', 'warning');
                 return;
             }
 
@@ -1711,43 +2442,46 @@
             saveTimeRecords();
             closeEditTimeModal();
             loadEditableRecords();
-            
+
             // Refresh other views if needed
             if (record.staffId === currentUser.id) {
                 renderTodayLog();
                 renderHistory();
             }
 
-            alert('✅ Time record updated successfully!');
+            showToast('Time record updated successfully!', 'success');
         }
 
         function deleteTimeRecord(index) {
             if (currentUser.role !== 'Admin') {
-                alert('⚠️ Admin access required');
+                showToast('Admin access required', 'error');
                 return;
             }
 
             const record = timeRecords[index];
-            
+
             if (confirm(`Are you sure you want to delete this time record?\n\nEmployee: ${record.staffName}\nDate: ${new Date(record.date).toLocaleDateString()}\nClock In: ${new Date(record.clockIn).toLocaleTimeString()}`)) {
                 timeRecords.splice(index, 1);
                 saveTimeRecords();
                 loadEditableRecords();
-                
+
                 // Refresh other views if needed
                 if (record.staffId === currentUser.id) {
                     renderTodayLog();
                     renderHistory();
                 }
-                
-                alert('✅ Time record deleted');
+
+                showToast('Time record deleted', 'success');
             }
         }
 
+        // Store current report data for export
+        let currentReportData = [];
+
         // Generate Report
         function generateReport() {
-            if (currentUser.role !== 'Admin') {
-                alert('⚠️ Admin access required');
+            if (currentUser.role !== 'Admin' && currentUser.role !== 'Viewer') {
+                showToast('Admin or Viewer access required', 'error');
                 return;
             }
 
@@ -1770,20 +2504,60 @@
             const tbody = document.getElementById('reportsTable');
             tbody.innerHTML = '';
 
+            // Hide summary and actions if no data
             if (filtered.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-secondary);">No records found</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-secondary);">No records found for the selected criteria</td></tr>';
+                document.getElementById('reportSummary').classList.remove('visible');
+                document.getElementById('reportActions').style.display = 'none';
+                document.getElementById('reportsTfoot').style.display = 'none';
+                currentReportData = [];
                 return;
             }
+
+            // Calculate summary statistics
+            let totalWorkSeconds = 0;
+            let totalBreakSeconds = 0;
+            const uniqueEmployees = new Set();
+            const uniqueDates = new Set();
+
+            // Store for export
+            currentReportData = [];
 
             filtered.sort((a, b) => new Date(b.date) - new Date(a.date)).forEach(record => {
                 const workTime = (new Date(record.clockOut) - new Date(record.clockIn)) / 1000;
                 const breakTime = record.breaks.reduce((sum, b) => sum + b.duration, 0);
                 const netTime = workTime - breakTime;
 
+                totalWorkSeconds += workTime;
+                totalBreakSeconds += breakTime;
+                uniqueEmployees.add(record.staffId);
+                uniqueDates.add(record.date);
+
+                // Store for export
+                currentReportData.push({
+                    employee: record.staffName,
+                    workType: record.workType,
+                    date: record.date,
+                    clockIn: new Date(record.clockIn).toLocaleTimeString(),
+                    clockOut: new Date(record.clockOut).toLocaleTimeString(),
+                    workTime: formatSecondsToHoursMinutes(workTime),
+                    breakTime: formatSecondsToHoursMinutes(breakTime),
+                    netTime: formatSecondsToHoursMinutes(netTime),
+                    workTimeSeconds: workTime,
+                    breakTimeSeconds: breakTime,
+                    netTimeSeconds: netTime
+                });
+
+                // Get appropriate badge class
+                let badgeClass = 'badge-primary';
+                if (record.workType === 'Part-Time') badgeClass = 'badge-warning';
+                else if (record.workType === 'Work From Home') badgeClass = 'badge-success';
+                else if (record.workType === 'Flexiwork') badgeClass = 'badge-purple';
+
                 const row = tbody.insertRow();
                 row.innerHTML = `
                     <td>${record.staffName}</td>
-                    <td><span class="badge ${record.workType === 'Full-Time' ? 'badge-primary' : 'badge-success'}">${record.workType}</span></td>
+                    <td><span class="badge ${badgeClass}">${record.workType}</span></td>
                     <td>${new Date(record.date).toLocaleDateString()}</td>
                     <td>${new Date(record.clockIn).toLocaleTimeString()}</td>
                     <td>${new Date(record.clockOut).toLocaleTimeString()}</td>
@@ -1792,6 +2566,156 @@
                     <td><strong>${formatSecondsToHoursMinutes(netTime)}</strong></td>
                 `;
             });
+
+            // Calculate totals
+            const totalNetSeconds = totalWorkSeconds - totalBreakSeconds;
+            const avgDailySeconds = uniqueDates.size > 0 ? totalNetSeconds / uniqueDates.size : 0;
+
+            // Update summary panel
+            const dateRangeText = `${fromDate ? new Date(fromDate).toLocaleDateString() : 'All'} - ${toDate ? new Date(toDate).toLocaleDateString() : 'Present'}`;
+
+            document.getElementById('summaryDateRange').textContent = dateRangeText;
+            document.getElementById('summaryTotalRecords').textContent = filtered.length;
+            document.getElementById('summaryTotalWork').textContent = formatSecondsToHoursMinutes(totalWorkSeconds);
+            document.getElementById('summaryTotalBreak').textContent = formatSecondsToHoursMinutes(totalBreakSeconds);
+            document.getElementById('summaryNetWork').textContent = formatSecondsToHoursMinutes(totalNetSeconds);
+            document.getElementById('summaryAvgDaily').textContent = formatSecondsToHoursMinutes(avgDailySeconds);
+            document.getElementById('summaryEmployees').textContent = uniqueEmployees.size;
+
+            // Update print summary
+            document.getElementById('printDateRange').textContent = `Report Period: ${dateRangeText}`;
+            document.getElementById('printTotalRecords').textContent = filtered.length;
+            document.getElementById('printTotalWork').textContent = formatSecondsToHoursMinutes(totalWorkSeconds);
+            document.getElementById('printTotalBreak').textContent = formatSecondsToHoursMinutes(totalBreakSeconds);
+            document.getElementById('printNetWork').textContent = formatSecondsToHoursMinutes(totalNetSeconds);
+
+            // Update table footer totals
+            document.getElementById('totalWorkTimeCell').textContent = formatSecondsToHoursMinutes(totalWorkSeconds);
+            document.getElementById('totalBreakTimeCell').textContent = formatSecondsToHoursMinutes(totalBreakSeconds);
+            document.getElementById('totalNetTimeCell').textContent = formatSecondsToHoursMinutes(totalNetSeconds);
+
+            // Show summary and actions
+            document.getElementById('reportSummary').classList.add('visible');
+            document.getElementById('reportActions').style.display = 'flex';
+            document.getElementById('reportsTfoot').style.display = 'table-footer-group';
+
+            showToast(`Report generated with ${filtered.length} records`, 'success');
+        }
+
+        // Export Report to CSV
+        function exportReportCSV() {
+            if (currentReportData.length === 0) {
+                showToast('No data to export. Generate a report first.', 'warning');
+                return;
+            }
+
+            const headers = ['Employee', 'Work Type', 'Date', 'Clock In', 'Clock Out', 'Work Time', 'Break Time', 'Net Time'];
+            const csvContent = [
+                headers.join(','),
+                ...currentReportData.map(row => [
+                    `"${row.employee}"`,
+                    `"${row.workType}"`,
+                    row.date,
+                    row.clockIn,
+                    row.clockOut,
+                    row.workTime,
+                    row.breakTime,
+                    row.netTime
+                ].join(','))
+            ].join('\n');
+
+            // Calculate totals for CSV
+            const totalWork = currentReportData.reduce((sum, r) => sum + r.workTimeSeconds, 0);
+            const totalBreak = currentReportData.reduce((sum, r) => sum + r.breakTimeSeconds, 0);
+            const totalNet = totalWork - totalBreak;
+
+            // Add totals row
+            const csvWithTotals = csvContent + '\n' +
+                `"TOTALS","","","","",${formatSecondsToHoursMinutes(totalWork)},${formatSecondsToHoursMinutes(totalBreak)},${formatSecondsToHoursMinutes(totalNet)}`;
+
+            const blob = new Blob([csvWithTotals], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+
+            const fromDate = document.getElementById('reportFromDate').value || 'all';
+            const toDate = document.getElementById('reportToDate').value || 'present';
+            const filename = `CESTIS_TimeReport_${fromDate}_to_${toDate}.csv`;
+
+            link.setAttribute('href', url);
+            link.setAttribute('download', filename);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            showToast('CSV exported successfully!', 'success');
+        }
+
+        // Print Report
+        function printReport() {
+            if (currentReportData.length === 0) {
+                showToast('No data to print. Generate a report first.', 'warning');
+                return;
+            }
+
+            // Update print generation date
+            document.getElementById('printGeneratedDate').textContent =
+                `Report generated on ${new Date().toLocaleString()} by ${currentUser.fullName}`;
+
+            // Switch to reports module for printing
+            document.querySelectorAll('.module').forEach(m => m.classList.remove('active'));
+            document.getElementById('reports').classList.add('active');
+
+            // Small delay to ensure DOM is updated
+            setTimeout(() => {
+                window.print();
+            }, 100);
+        }
+
+        // Export Report as PDF (uses browser print to PDF)
+        function exportReportPDF() {
+            if (currentReportData.length === 0) {
+                showToast('No data to export. Generate a report first.', 'warning');
+                return;
+            }
+
+            showToast('Opening print dialog. Select "Save as PDF" as your printer.', 'info');
+
+            // Update print generation date
+            document.getElementById('printGeneratedDate').textContent =
+                `Report generated on ${new Date().toLocaleString()} by ${currentUser.fullName}`;
+
+            setTimeout(() => {
+                window.print();
+            }, 500);
+        }
+
+        // Toast Notification System
+        function showToast(message, type = 'success') {
+            // Remove existing toasts
+            const existingToasts = document.querySelectorAll('.toast');
+            existingToasts.forEach(t => t.remove());
+
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+
+            let icon = '✓';
+            if (type === 'error') icon = '✕';
+            else if (type === 'warning') icon = '⚠';
+            else if (type === 'info') icon = 'ℹ';
+
+            toast.innerHTML = `
+                <span style="font-size: 1.2rem;">${icon}</span>
+                <span>${message}</span>
+            `;
+
+            document.body.appendChild(toast);
+
+            // Auto remove after 3 seconds
+            setTimeout(() => {
+                toast.style.animation = 'slideInRight 0.3s ease reverse';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
         }
 
         // Utility Functions
