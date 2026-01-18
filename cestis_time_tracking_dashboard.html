@@ -1,0 +1,1878 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CESTIS - Staff Time Tracking System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-blue: #0D47A1;
+            --light-blue: #1565C0;
+            --soft-blue: #E3F2FD;
+            --light-green: #A8D5A5;
+            --medium-green: #66BB6A;
+            --dark-green: #1B5E20;
+            --bg-primary: #f8f9fa;
+            --bg-secondary: #ffffff;
+            --text-primary: #333333;
+            --text-secondary: #666666;
+            --border-color: #dee2e6;
+            --danger: #dc3545;
+            --warning: #ffc107;
+            --success: #28a745;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        /* Dark Mode */
+        body.dark-mode {
+            --bg-primary: #1a1a1a;
+            --bg-secondary: #2d2d2d;
+            --text-primary: #e0e0e0;
+            --text-secondary: #b0b0b0;
+            --border-color: #444444;
+            --soft-blue: #1e3a5f;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1rem;
+        }
+
+        /* Login Page */
+        .login-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+            background: linear-gradient(135deg, #0D47A1 0%, #66BB6A 100%);
+        }
+
+        .login-box {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.3);
+            padding: 40px;
+            width: 100%;
+            max-width: 450px;
+            animation: slideUp 0.5s ease;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .login-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .login-title {
+            font-size: 28px;
+            color: #0D47A1;
+            margin-bottom: 10px;
+        }
+
+        .login-subtitle {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .login-input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .login-input:focus {
+            outline: none;
+            border-color: #0D47A1;
+            box-shadow: 0 0 0 3px rgba(13, 71, 161, 0.1);
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #0D47A1 0%, #66BB6A 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        .login-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(13, 71, 161, 0.4);
+        }
+
+        .login-error {
+            background: #fee;
+            color: #c33;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            display: none;
+            border-left: 4px solid #c33;
+        }
+
+        /* Header */
+        .header {
+            background: var(--bg-secondary);
+            padding: 1.5rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+            border-radius: 0.5rem;
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .header-logo {
+            max-width: 100px;
+            height: auto;
+        }
+
+        .header-title {
+            text-align: center;
+            flex: 1;
+        }
+
+        .header-title h1 {
+            color: var(--primary-blue);
+            font-size: 1.8rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .tagline {
+            color: var(--medium-green);
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 1rem;
+        }
+
+        /* Current Status Card */
+        .status-card {
+            background: var(--bg-secondary);
+            padding: 2rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .status-item {
+            text-align: center;
+            padding: 1rem;
+            background: var(--soft-blue);
+            border-radius: 0.5rem;
+        }
+
+        .status-label {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+
+        .status-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: var(--primary-blue);
+        }
+
+        .status-value.active {
+            color: var(--success);
+        }
+
+        .status-value.break {
+            color: var(--warning);
+        }
+
+        /* Action Buttons */
+        .action-buttons {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .btn {
+            padding: 0.8rem 1.5rem;
+            border: none;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: var(--primary-blue);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--light-blue);
+            transform: translateY(-2px);
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #218838;
+            transform: translateY(-2px);
+        }
+
+        .btn-warning {
+            background: var(--warning);
+            color: #333;
+        }
+
+        .btn-warning:hover {
+            background: #e0a800;
+            transform: translateY(-2px);
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+            transform: translateY(-2px);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Navigation Tabs */
+        .nav-tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 2rem;
+            border-bottom: 2px solid var(--border-color);
+            flex-wrap: wrap;
+        }
+
+        .nav-tab {
+            padding: 0.8rem 1.5rem;
+            background: transparent;
+            border: none;
+            border-bottom: 3px solid transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .nav-tab:hover {
+            color: var(--primary-blue);
+            background: var(--soft-blue);
+        }
+
+        .nav-tab.active {
+            color: var(--primary-blue);
+            border-bottom-color: var(--primary-blue);
+        }
+
+        /* Module */
+        .module {
+            display: none;
+        }
+
+        .module.active {
+            display: block;
+        }
+
+        /* Table */
+        .table-container {
+            background: var(--bg-secondary);
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: var(--primary-blue);
+            color: white;
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        td {
+            padding: 0.8rem 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        tr:hover {
+            background: var(--soft-blue);
+        }
+
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--light-green);
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: var(--dark-green);
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--dark-green);
+        }
+
+        /* Form */
+        .form-section {
+            background: var(--bg-secondary);
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 0.6rem;
+            border: 1px solid var(--border-color);
+            border-radius: 0.25rem;
+            font-size: 1rem;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+        }
+
+        /* Badge */
+        .badge {
+            display: inline-block;
+            padding: 0.3rem 0.8rem;
+            border-radius: 1rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .badge-success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .badge-warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .badge-danger {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .badge-primary {
+            background: #cce5ff;
+            color: #004085;
+        }
+
+        /* Logout Button */
+        .logout-btn {
+            background: var(--danger);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .logout-btn:hover {
+            background: #c82333;
+        }
+
+        /* Theme Toggle */
+        .theme-toggle-btn {
+            background: var(--primary-blue);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .theme-toggle-btn:hover {
+            background: var(--light-blue);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header-title h1 {
+                font-size: 1.3rem;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .action-buttons {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+
+        /* Current Timer Display */
+        .timer-display {
+            background: linear-gradient(135deg, var(--primary-blue), var(--medium-green));
+            color: white;
+            padding: 2rem;
+            border-radius: 0.5rem;
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .timer-display h2 {
+            font-size: 3rem;
+            margin: 0;
+            font-weight: bold;
+            letter-spacing: 2px;
+        }
+
+        .timer-label {
+            font-size: 1rem;
+            opacity: 0.9;
+            margin-top: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Login Page -->
+    <div id="loginPage" class="login-container">
+        <div class="login-box">
+            <div class="login-header">
+                <h1 class="login-title">CESTIS Time Tracking</h1>
+                <p class="login-subtitle">Community Educational and Skills Training Institute</p>
+                <p class="login-subtitle">and Services Limited</p>
+                <p class="login-subtitle" style="margin-top: 1rem; font-weight: 600;">Staff Login System</p>
+            </div>
+
+            <div class="login-error" id="loginError"></div>
+
+            <form onsubmit="handleLogin(event)">
+                <div class="input-group">
+                    <label>Employee ID / Username</label>
+                    <input type="text" id="loginUsername" class="login-input" required autocomplete="username">
+                </div>
+
+                <div class="input-group">
+                    <label>Password</label>
+                    <input type="password" id="loginPassword" class="login-input" required autocomplete="current-password">
+                </div>
+
+                <button type="submit" class="login-btn">🔐 Login</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main Dashboard -->
+    <div id="mainDashboard" style="display: none;">
+        <div class="container">
+            <!-- Header -->
+            <div class="header">
+                <div class="header-top">
+                    <button class="logout-btn" onclick="handleLogout()">
+                        <span>🚪</span>
+                        <span>Logout</span>
+                    </button>
+
+                    <div class="header-title">
+                        <h1>CESTIS STAFF TIME TRACKING SYSTEM</h1>
+                        <div class="tagline">EMPOWERING COMMUNITIES</div>
+                        <div class="subtitle">Employee Work Hours Management</div>
+                    </div>
+
+                    <div style="display: flex; align-items: center; gap: 1rem;">
+                        <span id="currentUserDisplay" style="font-weight: 600; color: var(--primary-blue);"></span>
+                        <button class="theme-toggle-btn" onclick="toggleDarkMode()">
+                            <span id="themeIcon">🌙</span>
+                            <span id="themeText">Dark</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Current Status -->
+            <div id="clockSection" class="status-card">
+                <h2 style="color: var(--primary-blue); margin-bottom: 1.5rem; text-align: center;">⏰ Current Status</h2>
+                
+                <div class="timer-display" id="timerDisplay" style="display: none;">
+                    <h2 id="currentTimer">00:00:00</h2>
+                    <p class="timer-label" id="timerLabel">Working Time</p>
+                </div>
+
+                <div class="status-grid">
+                    <div class="status-item">
+                        <div class="status-label">Status</div>
+                        <div class="status-value" id="currentStatus">Logged Out</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">Clock In Time</div>
+                        <div class="status-value" id="clockInTime">--:--</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">Total Work Time</div>
+                        <div class="status-value" id="totalWorkTime">0h 0m</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">Total Break Time</div>
+                        <div class="status-value" id="totalBreakTime">0h 0m</div>
+                    </div>
+                </div>
+
+                <div class="action-buttons">
+                    <button class="btn btn-success" id="clockInBtn" onclick="clockIn()">
+                        ⏰ Clock In
+                    </button>
+                    <button class="btn btn-warning" id="startBreakBtn" onclick="startBreak()" disabled>
+                        ☕ Start Break
+                    </button>
+                    <button class="btn btn-primary" id="endBreakBtn" onclick="endBreak()" disabled>
+                        ▶️ End Break
+                    </button>
+                    <button class="btn btn-danger" id="clockOutBtn" onclick="clockOut()" disabled>
+                        🏁 Clock Out
+                    </button>
+                </div>
+            </div>
+
+            <!-- Navigation -->
+            <div class="nav-tabs">
+                <button class="nav-tab active" onclick="switchModule('today')">📅 Today's Log</button>
+                <button class="nav-tab" onclick="switchModule('history')">📊 My History</button>
+                <button class="nav-tab" onclick="switchModule('reports')" id="reportsTab" style="display: none;">📈 Reports</button>
+                <button class="nav-tab" onclick="switchModule('editRecords')" id="editRecordsTab" style="display: none;">✏️ Edit Time Records</button>
+                <button class="nav-tab" onclick="switchModule('staff')" id="staffTab" style="display: none;">👥 Staff Management</button>
+            </div>
+
+            <!-- Today's Log Module -->
+            <div id="today" class="module active">
+                <h2 style="color: var(--primary-blue); margin-bottom: 1.5rem;">📅 Today's Activity Log</h2>
+                
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-label">Total Work Time Today</div>
+                        <div class="stat-value" id="todayWorkTime">0h 0m</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Total Break Time Today</div>
+                        <div class="stat-value" id="todayBreakTime">0h 0m</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Net Work Time</div>
+                        <div class="stat-value" id="todayNetTime">0h 0m</div>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <h3 style="margin-bottom: 1rem;">Activity Timeline</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>Activity</th>
+                                <th>Duration</th>
+                                <th>Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody id="todayLogTable">
+                            <tr>
+                                <td colspan="4" style="text-align: center; color: var(--text-secondary);">No activity recorded today</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- History Module -->
+            <div id="history" class="module">
+                <h2 style="color: var(--primary-blue); margin-bottom: 1.5rem;">📊 My Work History</h2>
+                
+                <div class="form-section">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>From Date</label>
+                            <input type="date" id="historyFromDate">
+                        </div>
+                        <div class="form-group">
+                            <label>To Date</label>
+                            <input type="date" id="historyToDate">
+                        </div>
+                        <div class="form-group" style="display: flex; align-items: flex-end;">
+                            <button class="btn btn-primary" onclick="filterHistory()">🔍 Filter</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Clock In</th>
+                                <th>Clock Out</th>
+                                <th>Work Time</th>
+                                <th>Break Time</th>
+                                <th>Net Time</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historyTable">
+                            <tr>
+                                <td colspan="7" style="text-align: center; color: var(--text-secondary);">No history records</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Reports Module (Admin) -->
+            <div id="reports" class="module">
+                <h2 style="color: var(--primary-blue); margin-bottom: 1.5rem;">📈 Staff Reports</h2>
+                
+                <div class="form-section">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Select Staff</label>
+                            <select id="reportStaffSelect">
+                                <option value="">All Staff</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>From Date</label>
+                            <input type="date" id="reportFromDate">
+                        </div>
+                        <div class="form-group">
+                            <label>To Date</label>
+                            <input type="date" id="reportToDate">
+                        </div>
+                        <div class="form-group" style="display: flex; align-items: flex-end;">
+                            <button class="btn btn-primary" onclick="generateReport()">📊 Generate Report</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Employee</th>
+                                <th>Work Type</th>
+                                <th>Date</th>
+                                <th>Clock In</th>
+                                <th>Clock Out</th>
+                                <th>Work Time</th>
+                                <th>Break Time</th>
+                                <th>Net Time</th>
+                            </tr>
+                        </thead>
+                        <tbody id="reportsTable">
+                            <tr>
+                                <td colspan="8" style="text-align: center; color: var(--text-secondary);">Generate a report to view data</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Edit Time Records Module (Admin Only) -->
+            <div id="editRecords" class="module">
+                <h2 style="color: var(--primary-blue); margin-bottom: 1.5rem;">✏️ Edit Time Records (Admin)</h2>
+                
+                <div class="form-section">
+                    <h3 style="margin-bottom: 1rem; color: var(--danger);">⚠️ Admin Controls - Edit with Caution</h3>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Select Staff</label>
+                            <select id="editStaffSelect" onchange="loadEditableRecords()">
+                                <option value="">-- Select Staff Member --</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>From Date</label>
+                            <input type="date" id="editFromDate" onchange="loadEditableRecords()">
+                        </div>
+                        <div class="form-group">
+                            <label>To Date</label>
+                            <input type="date" id="editToDate" onchange="loadEditableRecords()">
+                        </div>
+                        <div class="form-group" style="display: flex; align-items: flex-end;">
+                            <button class="btn btn-primary" onclick="loadEditableRecords()">🔍 Load Records</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Employee</th>
+                                <th>Date</th>
+                                <th>Clock In</th>
+                                <th>Clock Out</th>
+                                <th>Breaks</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="editRecordsTable">
+                            <tr>
+                                <td colspan="7" style="text-align: center; color: var(--text-secondary);">Select staff and dates to load records</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Staff Management Module (Admin) -->
+            <div id="staff" class="module">
+                <h2 style="color: var(--primary-blue); margin-bottom: 1.5rem;">👥 Staff Management</h2>
+                
+                <div class="form-section">
+                    <h3 style="margin-bottom: 1rem;">Add New Staff Member</h3>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Full Name *</label>
+                            <input type="text" id="newStaffName">
+                        </div>
+                        <div class="form-group">
+                            <label>Employee ID / Username *</label>
+                            <input type="text" id="newStaffUsername">
+                        </div>
+                        <div class="form-group">
+                            <label>Password *</label>
+                            <input type="password" id="newStaffPassword">
+                        </div>
+                        <div class="form-group">
+                            <label>Work Type *</label>
+                            <select id="newStaffWorkType">
+                                <option value="Full-Time">Full-Time</option>
+                                <option value="Part-Time">Part-Time</option>
+                                <option value="Work From Home">Work From Home</option>
+                                <option value="Flexiwork">Flexiwork</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Role *</label>
+                            <select id="newStaffRole">
+                                <option value="Staff">Staff</option>
+                                <option value="Viewer">Viewer (View Only)</option>
+                                <option value="Admin">Admin</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button class="btn btn-success" onclick="addStaff()">➕ Add Staff Member</button>
+                </div>
+
+                <div class="table-container">
+                    <h3 style="margin-bottom: 1rem;">All Staff Members</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Employee ID</th>
+                                <th>Full Name</th>
+                                <th>Work Type</th>
+                                <th>Role</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="staffTable">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Time Record Modal -->
+    <div id="editTimeModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+        <div style="background: var(--bg-secondary); padding: 2rem; border-radius: 0.5rem; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto;">
+            <h2 style="color: var(--primary-blue); margin-bottom: 1.5rem;">✏️ Edit Time Record</h2>
+            
+            <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 1rem; margin-bottom: 1.5rem;">
+                <strong>⚠️ Warning:</strong> Editing time records affects payroll calculations. Ensure accuracy before saving.
+            </div>
+
+            <div class="form-group">
+                <label>Employee</label>
+                <input type="text" id="editRecordStaff" disabled style="background: #f0f0f0;">
+            </div>
+
+            <div class="form-group">
+                <label>Date</label>
+                <input type="date" id="editRecordDate">
+            </div>
+
+            <div class="form-group">
+                <label>Clock In Time</label>
+                <input type="time" id="editRecordClockIn" step="1">
+            </div>
+
+            <div class="form-group">
+                <label>Clock Out Time</label>
+                <input type="time" id="editRecordClockOut" step="1">
+            </div>
+
+            <div class="form-group">
+                <label>Break Details</label>
+                <div id="editBreaksList" style="margin-top: 0.5rem;">
+                    <!-- Break entries will be added here -->
+                </div>
+                <button class="btn btn-secondary" onclick="addBreakToEdit()" style="margin-top: 0.5rem; font-size: 0.9rem; padding: 0.4rem 0.8rem;">+ Add Break</button>
+            </div>
+
+            <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                <button class="btn btn-success" onclick="saveTimeRecordEdit()">💾 Save Changes</button>
+                <button class="btn btn-secondary" onclick="closeEditTimeModal()">❌ Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Data Storage
+        let currentUser = null;
+        let staffMembers = [];
+        let timeRecords = [];
+        let currentSession = null;
+        let timerInterval = null;
+        let editingRecordIndex = null;
+
+        // Initialize default admin
+        function initializeDefaultAdmin() {
+            const saved = localStorage.getItem('cestisStaffMembers');
+            if (!saved) {
+                staffMembers = [{
+                    id: 'ADMIN001',
+                    username: 'admin',
+                    password: 'admin123',
+                    fullName: 'System Administrator',
+                    workType: 'Full-Time',
+                    role: 'Admin',
+                    status: 'Active',
+                    createdDate: new Date().toISOString()
+                }];
+                saveStaffMembers();
+            } else {
+                staffMembers = JSON.parse(saved);
+            }
+        }
+
+        // Save functions
+        function saveStaffMembers() {
+            localStorage.setItem('cestisStaffMembers', JSON.stringify(staffMembers));
+        }
+
+        function saveTimeRecords() {
+            localStorage.setItem('cestisTimeRecords', JSON.stringify(timeRecords));
+        }
+
+        function loadTimeRecords() {
+            const saved = localStorage.getItem('cestisTimeRecords');
+            if (saved) {
+                timeRecords = JSON.parse(saved);
+            }
+        }
+
+        // Login
+        function handleLogin(event) {
+            event.preventDefault();
+            
+            const username = document.getElementById('loginUsername').value.trim();
+            const password = document.getElementById('loginPassword').value;
+            
+            const staff = staffMembers.find(s => s.username === username && s.password === password);
+            
+            if (staff) {
+                currentUser = staff;
+                sessionStorage.setItem('cestisCurrentUser', JSON.stringify(staff));
+                
+                document.getElementById('loginPage').style.display = 'none';
+                document.getElementById('mainDashboard').style.display = 'block';
+                document.getElementById('currentUserDisplay').textContent = `👤 ${staff.fullName} (${staff.workType})`;
+                
+                updateUIForRole();
+                loadTodaysSession();
+                renderTodayLog();
+                renderHistory();
+                
+            } else {
+                const errorDiv = document.getElementById('loginError');
+                errorDiv.textContent = '❌ Invalid credentials';
+                errorDiv.style.display = 'block';
+                setTimeout(() => errorDiv.style.display = 'none', 3000);
+            }
+        }
+
+        // Logout
+        function handleLogout() {
+            if (currentSession && currentSession.status !== 'completed') {
+                alert('⚠️ Please clock out before logging out');
+                return;
+            }
+            
+            if (confirm('Are you sure you want to logout?')) {
+                currentUser = null;
+                currentSession = null;
+                sessionStorage.removeItem('cestisCurrentUser');
+                clearInterval(timerInterval);
+                
+                document.getElementById('loginPage').style.display = 'flex';
+                document.getElementById('mainDashboard').style.display = 'none';
+                document.getElementById('loginUsername').value = '';
+                document.getElementById('loginPassword').value = '';
+            }
+        }
+
+        // Update UI based on role
+        function updateUIForRole() {
+            if (currentUser.role === 'Admin') {
+                document.getElementById('reportsTab').style.display = 'block';
+                document.getElementById('editRecordsTab').style.display = 'block';
+                document.getElementById('staffTab').style.display = 'block';
+                populateStaffSelect();
+                populateEditStaffSelect();
+                renderStaffTable();
+            } else if (currentUser.role === 'Viewer') {
+                // Viewer can see reports but not edit anything
+                document.getElementById('reportsTab').style.display = 'block';
+                document.getElementById('editRecordsTab').style.display = 'none';
+                document.getElementById('staffTab').style.display = 'none';
+                populateStaffSelect();
+                // Hide clock in/out section for viewers
+                document.getElementById('clockSection').style.display = 'none';
+            } else {
+                document.getElementById('reportsTab').style.display = 'none';
+                document.getElementById('editRecordsTab').style.display = 'none';
+                document.getElementById('staffTab').style.display = 'none';
+            }
+        }
+
+        // Clock In
+        function clockIn() {
+            if (currentUser.role === 'Viewer') {
+                alert('⚠️ Viewers cannot clock in. This is a view-only account.');
+                return;
+            }
+
+            if (currentSession && currentSession.status !== 'completed') {
+                alert('You are already clocked in!');
+                return;
+            }
+
+            const now = new Date();
+            currentSession = {
+                id: 'SESSION_' + Date.now(),
+                staffId: currentUser.id,
+                staffName: currentUser.fullName,
+                workType: currentUser.workType,
+                date: now.toISOString().split('T')[0],
+                clockIn: now.toISOString(),
+                clockOut: null,
+                status: 'working',
+                breaks: [],
+                currentBreakStart: null
+            };
+
+            timeRecords.push(currentSession);
+            saveTimeRecords();
+
+            updateClockInterface();
+            startTimer();
+            renderTodayLog();
+
+            alert('✅ Clocked in successfully!');
+        }
+
+        // Start Break
+        function startBreak() {
+            if (!currentSession || currentSession.status !== 'working') {
+                alert('You must be clocked in to take a break');
+                return;
+            }
+
+            currentSession.status = 'break';
+            currentSession.currentBreakStart = new Date().toISOString();
+            saveTimeRecords();
+
+            updateClockInterface();
+            renderTodayLog();
+
+            alert('☕ Break started');
+        }
+
+        // End Break
+        function endBreak() {
+            if (!currentSession || currentSession.status !== 'break') {
+                alert('You are not on break');
+                return;
+            }
+
+            const breakEnd = new Date();
+            const breakStart = new Date(currentSession.currentBreakStart);
+            const breakDuration = (breakEnd - breakStart) / 1000; // seconds
+
+            currentSession.breaks.push({
+                start: currentSession.currentBreakStart,
+                end: breakEnd.toISOString(),
+                duration: breakDuration
+            });
+
+            currentSession.status = 'working';
+            currentSession.currentBreakStart = null;
+            saveTimeRecords();
+
+            updateClockInterface();
+            renderTodayLog();
+
+            alert('▶️ Break ended. Back to work!');
+        }
+
+        // Clock Out
+        function clockOut() {
+            if (!currentSession || currentSession.status === 'completed') {
+                alert('You are not clocked in');
+                return;
+            }
+
+            if (currentSession.status === 'break') {
+                alert('⚠️ Please end your break before clocking out');
+                return;
+            }
+
+            if (confirm('Are you sure you want to clock out?')) {
+                currentSession.clockOut = new Date().toISOString();
+                currentSession.status = 'completed';
+                saveTimeRecords();
+
+                stopTimer();
+                updateClockInterface();
+                renderTodayLog();
+                renderHistory();
+
+                alert('🏁 Clocked out successfully!');
+            }
+        }
+
+        // Update Clock Interface
+        function updateClockInterface() {
+            const clockInBtn = document.getElementById('clockInBtn');
+            const startBreakBtn = document.getElementById('startBreakBtn');
+            const endBreakBtn = document.getElementById('endBreakBtn');
+            const clockOutBtn = document.getElementById('clockOutBtn');
+            const statusDisplay = document.getElementById('currentStatus');
+            const clockInTimeDisplay = document.getElementById('clockInTime');
+
+            if (!currentSession || currentSession.status === 'completed') {
+                clockInBtn.disabled = false;
+                startBreakBtn.disabled = true;
+                endBreakBtn.disabled = true;
+                clockOutBtn.disabled = true;
+                statusDisplay.textContent = 'Logged Out';
+                statusDisplay.className = 'status-value';
+                clockInTimeDisplay.textContent = '--:--';
+                document.getElementById('timerDisplay').style.display = 'none';
+            } else if (currentSession.status === 'working') {
+                clockInBtn.disabled = true;
+                startBreakBtn.disabled = false;
+                endBreakBtn.disabled = true;
+                clockOutBtn.disabled = false;
+                statusDisplay.textContent = '✓ Working';
+                statusDisplay.className = 'status-value active';
+                clockInTimeDisplay.textContent = new Date(currentSession.clockIn).toLocaleTimeString();
+                document.getElementById('timerDisplay').style.display = 'block';
+                document.getElementById('timerLabel').textContent = 'Working Time';
+            } else if (currentSession.status === 'break') {
+                clockInBtn.disabled = true;
+                startBreakBtn.disabled = true;
+                endBreakBtn.disabled = false;
+                clockOutBtn.disabled = true;
+                statusDisplay.textContent = '☕ On Break';
+                statusDisplay.className = 'status-value break';
+                document.getElementById('timerDisplay').style.display = 'block';
+                document.getElementById('timerLabel').textContent = 'Break Time';
+            }
+
+            updateTimeSummary();
+        }
+
+        // Timer Functions
+        function startTimer() {
+            clearInterval(timerInterval);
+            timerInterval = setInterval(updateTimer, 1000);
+        }
+
+        function stopTimer() {
+            clearInterval(timerInterval);
+            document.getElementById('currentTimer').textContent = '00:00:00';
+        }
+
+        function updateTimer() {
+            if (!currentSession) return;
+
+            let startTime;
+            if (currentSession.status === 'working') {
+                startTime = new Date(currentSession.clockIn);
+                // Subtract break time
+                let totalBreakSeconds = currentSession.breaks.reduce((sum, b) => sum + b.duration, 0);
+                const elapsed = Math.floor((new Date() - startTime) / 1000) - totalBreakSeconds;
+                document.getElementById('currentTimer').textContent = formatSecondsToTime(elapsed);
+            } else if (currentSession.status === 'break' && currentSession.currentBreakStart) {
+                startTime = new Date(currentSession.currentBreakStart);
+                const elapsed = Math.floor((new Date() - startTime) / 1000);
+                document.getElementById('currentTimer').textContent = formatSecondsToTime(elapsed);
+            }
+        }
+
+        // Update Time Summary
+        function updateTimeSummary() {
+            if (!currentSession) {
+                document.getElementById('totalWorkTime').textContent = '0h 0m';
+                document.getElementById('totalBreakTime').textContent = '0h 0m';
+                return;
+            }
+
+            const now = new Date();
+            const clockInTime = new Date(currentSession.clockIn);
+            let totalSeconds = Math.floor((now - clockInTime) / 1000);
+
+            let breakSeconds = currentSession.breaks.reduce((sum, b) => sum + b.duration, 0);
+            if (currentSession.status === 'break' && currentSession.currentBreakStart) {
+                const currentBreakStart = new Date(currentSession.currentBreakStart);
+                breakSeconds += Math.floor((now - currentBreakStart) / 1000);
+            }
+
+            const workSeconds = totalSeconds - breakSeconds;
+
+            document.getElementById('totalWorkTime').textContent = formatSecondsToHoursMinutes(workSeconds);
+            document.getElementById('totalBreakTime').textContent = formatSecondsToHoursMinutes(breakSeconds);
+        }
+
+        // Load Today's Session
+        function loadTodaysSession() {
+            const today = new Date().toISOString().split('T')[0];
+            const todaysSessions = timeRecords.filter(r => 
+                r.staffId === currentUser.id && 
+                r.date === today && 
+                r.status !== 'completed'
+            );
+
+            if (todaysSessions.length > 0) {
+                currentSession = todaysSessions[todaysSessions.length - 1];
+                updateClockInterface();
+                if (currentSession.status === 'working' || currentSession.status === 'break') {
+                    startTimer();
+                }
+            }
+        }
+
+        // Render Today's Log
+        function renderTodayLog() {
+            const today = new Date().toISOString().split('T')[0];
+            const todayRecords = timeRecords.filter(r => r.staffId === currentUser.id && r.date === today);
+
+            const tbody = document.getElementById('todayLogTable');
+            tbody.innerHTML = '';
+
+            if (todayRecords.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-secondary);">No activity recorded today</td></tr>';
+                document.getElementById('todayWorkTime').textContent = '0h 0m';
+                document.getElementById('todayBreakTime').textContent = '0h 0m';
+                document.getElementById('todayNetTime').textContent = '0h 0m';
+                return;
+            }
+
+            let totalWorkSeconds = 0;
+            let totalBreakSeconds = 0;
+
+            todayRecords.forEach(record => {
+                // Clock In
+                const row1 = tbody.insertRow();
+                row1.innerHTML = `
+                    <td>${new Date(record.clockIn).toLocaleTimeString()}</td>
+                    <td><span class="badge badge-success">Clock In</span></td>
+                    <td>-</td>
+                    <td>${record.workType}</td>
+                `;
+
+                // Breaks
+                record.breaks.forEach(br => {
+                    const row = tbody.insertRow();
+                    row.innerHTML = `
+                        <td>${new Date(br.start).toLocaleTimeString()}</td>
+                        <td><span class="badge badge-warning">Break Start</span></td>
+                        <td>${formatSecondsToHoursMinutes(br.duration)}</td>
+                        <td>-</td>
+                    `;
+                    totalBreakSeconds += br.duration;
+
+                    const row2 = tbody.insertRow();
+                    row2.innerHTML = `
+                        <td>${new Date(br.end).toLocaleTimeString()}</td>
+                        <td><span class="badge badge-primary">Break End</span></td>
+                        <td>-</td>
+                        <td>-</td>
+                    `;
+                });
+
+                // Clock Out
+                if (record.clockOut) {
+                    const row2 = tbody.insertRow();
+                    const workTime = (new Date(record.clockOut) - new Date(record.clockIn)) / 1000;
+                    totalWorkSeconds += workTime;
+                    
+                    row2.innerHTML = `
+                        <td>${new Date(record.clockOut).toLocaleTimeString()}</td>
+                        <td><span class="badge badge-danger">Clock Out</span></td>
+                        <td>${formatSecondsToHoursMinutes(workTime)}</td>
+                        <td>-</td>
+                    `;
+                }
+            });
+
+            const netWorkSeconds = totalWorkSeconds - totalBreakSeconds;
+            document.getElementById('todayWorkTime').textContent = formatSecondsToHoursMinutes(totalWorkSeconds);
+            document.getElementById('todayBreakTime').textContent = formatSecondsToHoursMinutes(totalBreakSeconds);
+            document.getElementById('todayNetTime').textContent = formatSecondsToHoursMinutes(netWorkSeconds);
+        }
+
+        // Render History
+        function renderHistory() {
+            const userRecords = timeRecords.filter(r => 
+                r.staffId === currentUser.id && 
+                r.status === 'completed'
+            ).sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            const tbody = document.getElementById('historyTable');
+            tbody.innerHTML = '';
+
+            if (userRecords.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-secondary);">No history records</td></tr>';
+                return;
+            }
+
+            // Group by date
+            const grouped = {};
+            userRecords.forEach(record => {
+                if (!grouped[record.date]) {
+                    grouped[record.date] = [];
+                }
+                grouped[record.date].push(record);
+            });
+
+            Object.keys(grouped).sort((a, b) => new Date(b) - new Date(a)).forEach(date => {
+                const dayRecords = grouped[date];
+                let totalWorkSeconds = 0;
+                let totalBreakSeconds = 0;
+                let firstClockIn = null;
+                let lastClockOut = null;
+
+                dayRecords.forEach(record => {
+                    if (!firstClockIn) firstClockIn = record.clockIn;
+                    if (record.clockOut) lastClockOut = record.clockOut;
+
+                    const workTime = (new Date(record.clockOut) - new Date(record.clockIn)) / 1000;
+                    const breakTime = record.breaks.reduce((sum, b) => sum + b.duration, 0);
+                    
+                    totalWorkSeconds += workTime;
+                    totalBreakSeconds += breakTime;
+                });
+
+                const netTime = totalWorkSeconds - totalBreakSeconds;
+                const row = tbody.insertRow();
+                row.innerHTML = `
+                    <td>${new Date(date).toLocaleDateString()}</td>
+                    <td>${firstClockIn ? new Date(firstClockIn).toLocaleTimeString() : '-'}</td>
+                    <td>${lastClockOut ? new Date(lastClockOut).toLocaleTimeString() : '-'}</td>
+                    <td>${formatSecondsToHoursMinutes(totalWorkSeconds)}</td>
+                    <td>${formatSecondsToHoursMinutes(totalBreakSeconds)}</td>
+                    <td><strong>${formatSecondsToHoursMinutes(netTime)}</strong></td>
+                    <td><span class="badge badge-success">Completed</span></td>
+                `;
+            });
+        }
+
+        // Staff Management (Admin)
+        function addStaff() {
+            if (currentUser.role !== 'Admin') {
+                alert('⚠️ Admin access required');
+                return;
+            }
+
+            const name = document.getElementById('newStaffName').value.trim();
+            const username = document.getElementById('newStaffUsername').value.trim();
+            const password = document.getElementById('newStaffPassword').value;
+            const workType = document.getElementById('newStaffWorkType').value;
+            const role = document.getElementById('newStaffRole').value;
+
+            if (!name || !username || !password) {
+                alert('Please fill in all required fields');
+                return;
+            }
+
+            if (staffMembers.find(s => s.username === username)) {
+                alert('❌ Username already exists');
+                return;
+            }
+
+            const newStaff = {
+                id: 'STAFF' + Date.now(),
+                username: username,
+                password: password,
+                fullName: name,
+                workType: workType,
+                role: role,
+                status: 'Active',
+                createdDate: new Date().toISOString()
+            };
+
+            staffMembers.push(newStaff);
+            saveStaffMembers();
+            renderStaffTable();
+            populateStaffSelect();
+            populateEditStaffSelect();
+
+            document.getElementById('newStaffName').value = '';
+            document.getElementById('newStaffUsername').value = '';
+            document.getElementById('newStaffPassword').value = '';
+
+            alert('✅ Staff member added successfully!');
+        }
+
+        function renderStaffTable() {
+            const tbody = document.getElementById('staffTable');
+            tbody.innerHTML = '';
+
+            staffMembers.forEach((staff, index) => {
+                const row = tbody.insertRow();
+                
+                let workTypeBadge = 'badge-primary';
+                if (staff.workType === 'Part-Time') workTypeBadge = 'badge-warning';
+                else if (staff.workType === 'Work From Home') workTypeBadge = 'badge-success';
+                else if (staff.workType === 'Flexiwork') workTypeBadge = 'badge-primary';
+                
+                let roleBadge = 'badge-primary';
+                if (staff.role === 'Admin') roleBadge = 'badge-danger';
+                else if (staff.role === 'Viewer') roleBadge = 'badge-warning';
+                
+                row.innerHTML = `
+                    <td>${staff.username}</td>
+                    <td>${staff.fullName}</td>
+                    <td><span class="badge ${workTypeBadge}">${staff.workType}</span></td>
+                    <td><span class="badge ${roleBadge}">${staff.role}</span></td>
+                    <td><span class="badge badge-success">${staff.status}</span></td>
+                    <td>
+                        <button class="btn btn-danger" onclick="deleteStaff(${index})" ${staff.role === 'Admin' ? 'disabled' : ''}>Delete</button>
+                    </td>
+                `;
+            });
+        }
+
+        function deleteStaff(index) {
+            if (confirm('Are you sure you want to delete this staff member?')) {
+                staffMembers.splice(index, 1);
+                saveStaffMembers();
+                renderStaffTable();
+                populateStaffSelect();
+                populateEditStaffSelect();
+                alert('✅ Staff member deleted');
+            }
+        }
+
+        function populateStaffSelect() {
+            const select = document.getElementById('reportStaffSelect');
+            select.innerHTML = '<option value="">All Staff</option>';
+            
+            staffMembers.forEach(staff => {
+                const option = document.createElement('option');
+                option.value = staff.id;
+                option.textContent = `${staff.fullName} (${staff.workType})`;
+                select.appendChild(option);
+            });
+        }
+
+        function populateEditStaffSelect() {
+            const select = document.getElementById('editStaffSelect');
+            select.innerHTML = '<option value="">-- Select Staff Member --</option>';
+            
+            staffMembers.forEach(staff => {
+                const option = document.createElement('option');
+                option.value = staff.id;
+                option.textContent = `${staff.fullName} (${staff.workType})`;
+                select.appendChild(option);
+            });
+        }
+
+        // Edit Time Records Functions (Admin Only)
+        function loadEditableRecords() {
+            if (currentUser.role !== 'Admin') {
+                alert('⚠️ Admin access required');
+                return;
+            }
+
+            const staffId = document.getElementById('editStaffSelect').value;
+            const fromDate = document.getElementById('editFromDate').value;
+            const toDate = document.getElementById('editToDate').value;
+
+            if (!staffId) {
+                alert('Please select a staff member');
+                return;
+            }
+
+            let filtered = timeRecords.filter(r => r.staffId === staffId);
+
+            if (fromDate) {
+                filtered = filtered.filter(r => r.date >= fromDate);
+            }
+            if (toDate) {
+                filtered = filtered.filter(r => r.date <= toDate);
+            }
+
+            const tbody = document.getElementById('editRecordsTable');
+            tbody.innerHTML = '';
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-secondary);">No records found</td></tr>';
+                return;
+            }
+
+            filtered.sort((a, b) => new Date(b.date) - new Date(a.date)).forEach((record, index) => {
+                const actualIndex = timeRecords.findIndex(r => r.id === record.id);
+                const breakCount = record.breaks.length;
+                const breakSummary = breakCount > 0 ? `${breakCount} break(s)` : 'No breaks';
+
+                const row = tbody.insertRow();
+                row.innerHTML = `
+                    <td>${record.staffName}</td>
+                    <td>${new Date(record.date).toLocaleDateString()}</td>
+                    <td>${new Date(record.clockIn).toLocaleTimeString()}</td>
+                    <td>${record.clockOut ? new Date(record.clockOut).toLocaleTimeString() : 'In Progress'}</td>
+                    <td>${breakSummary}</td>
+                    <td><span class="badge ${record.status === 'completed' ? 'badge-success' : 'badge-warning'}">${record.status}</span></td>
+                    <td>
+                        <button class="btn btn-primary" onclick="openEditTimeModal(${actualIndex})" style="font-size: 0.85rem; padding: 0.4rem 0.8rem; margin-right: 0.5rem;">✏️ Edit</button>
+                        <button class="btn btn-danger" onclick="deleteTimeRecord(${actualIndex})" style="font-size: 0.85rem; padding: 0.4rem 0.8rem;">🗑️ Delete</button>
+                    </td>
+                `;
+            });
+        }
+
+        function openEditTimeModal(index) {
+            if (currentUser.role !== 'Admin') {
+                alert('⚠️ Admin access required');
+                return;
+            }
+
+            editingRecordIndex = index;
+            const record = timeRecords[index];
+
+            document.getElementById('editRecordStaff').value = record.staffName;
+            document.getElementById('editRecordDate').value = record.date;
+
+            // Convert ISO to time input format
+            const clockInTime = new Date(record.clockIn).toTimeString().substring(0, 8);
+            document.getElementById('editRecordClockIn').value = clockInTime;
+
+            if (record.clockOut) {
+                const clockOutTime = new Date(record.clockOut).toTimeString().substring(0, 8);
+                document.getElementById('editRecordClockOut').value = clockOutTime;
+            } else {
+                document.getElementById('editRecordClockOut').value = '';
+            }
+
+            // Populate breaks
+            const breaksList = document.getElementById('editBreaksList');
+            breaksList.innerHTML = '';
+            
+            record.breaks.forEach((br, i) => {
+                const breakDiv = document.createElement('div');
+                breakDiv.style.cssText = 'display: flex; gap: 0.5rem; margin-bottom: 0.5rem; align-items: center;';
+                
+                const startTime = new Date(br.start).toTimeString().substring(0, 8);
+                const endTime = new Date(br.end).toTimeString().substring(0, 8);
+                
+                breakDiv.innerHTML = `
+                    <input type="time" value="${startTime}" step="1" style="flex: 1;" class="break-start-${i}">
+                    <span>to</span>
+                    <input type="time" value="${endTime}" step="1" style="flex: 1;" class="break-end-${i}">
+                    <button class="btn btn-danger" onclick="removeBreakFromEdit(this)" style="font-size: 0.8rem; padding: 0.3rem 0.6rem;">Remove</button>
+                `;
+                breaksList.appendChild(breakDiv);
+            });
+
+            document.getElementById('editTimeModal').style.display = 'flex';
+        }
+
+        function closeEditTimeModal() {
+            document.getElementById('editTimeModal').style.display = 'none';
+            editingRecordIndex = null;
+        }
+
+        function addBreakToEdit() {
+            const breaksList = document.getElementById('editBreaksList');
+            const breakCount = breaksList.children.length;
+            
+            const breakDiv = document.createElement('div');
+            breakDiv.style.cssText = 'display: flex; gap: 0.5rem; margin-bottom: 0.5rem; align-items: center;';
+            
+            breakDiv.innerHTML = `
+                <input type="time" value="12:00:00" step="1" style="flex: 1;" class="break-start-${breakCount}">
+                <span>to</span>
+                <input type="time" value="13:00:00" step="1" style="flex: 1;" class="break-end-${breakCount}">
+                <button class="btn btn-danger" onclick="removeBreakFromEdit(this)" style="font-size: 0.8rem; padding: 0.3rem 0.6rem;">Remove</button>
+            `;
+            breaksList.appendChild(breakDiv);
+        }
+
+        function removeBreakFromEdit(button) {
+            button.parentElement.remove();
+        }
+
+        function saveTimeRecordEdit() {
+            if (currentUser.role !== 'Admin') {
+                alert('⚠️ Admin access required');
+                return;
+            }
+
+            if (editingRecordIndex === null) return;
+
+            const record = timeRecords[editingRecordIndex];
+            const date = document.getElementById('editRecordDate').value;
+            const clockInTime = document.getElementById('editRecordClockIn').value;
+            const clockOutTime = document.getElementById('editRecordClockOut').value;
+
+            if (!date || !clockInTime) {
+                alert('Date and Clock In time are required');
+                return;
+            }
+
+            // Update date and times
+            record.date = date;
+            record.clockIn = new Date(date + 'T' + clockInTime).toISOString();
+            
+            if (clockOutTime) {
+                record.clockOut = new Date(date + 'T' + clockOutTime).toISOString();
+                record.status = 'completed';
+            } else {
+                record.clockOut = null;
+            }
+
+            // Update breaks
+            const breaksList = document.getElementById('editBreaksList');
+            const newBreaks = [];
+            
+            for (let i = 0; i < breaksList.children.length; i++) {
+                const startInput = breaksList.children[i].querySelector(`input[class*="break-start-"]`);
+                const endInput = breaksList.children[i].querySelector(`input[class*="break-end-"]`);
+                
+                if (startInput && endInput) {
+                    const startTime = startInput.value;
+                    const endTime = endInput.value;
+                    
+                    const startDate = new Date(date + 'T' + startTime);
+                    const endDate = new Date(date + 'T' + endTime);
+                    const duration = (endDate - startDate) / 1000; // seconds
+                    
+                    newBreaks.push({
+                        start: startDate.toISOString(),
+                        end: endDate.toISOString(),
+                        duration: duration
+                    });
+                }
+            }
+            
+            record.breaks = newBreaks;
+
+            saveTimeRecords();
+            closeEditTimeModal();
+            loadEditableRecords();
+            
+            // Refresh other views if needed
+            if (record.staffId === currentUser.id) {
+                renderTodayLog();
+                renderHistory();
+            }
+
+            alert('✅ Time record updated successfully!');
+        }
+
+        function deleteTimeRecord(index) {
+            if (currentUser.role !== 'Admin') {
+                alert('⚠️ Admin access required');
+                return;
+            }
+
+            const record = timeRecords[index];
+            
+            if (confirm(`Are you sure you want to delete this time record?\n\nEmployee: ${record.staffName}\nDate: ${new Date(record.date).toLocaleDateString()}\nClock In: ${new Date(record.clockIn).toLocaleTimeString()}`)) {
+                timeRecords.splice(index, 1);
+                saveTimeRecords();
+                loadEditableRecords();
+                
+                // Refresh other views if needed
+                if (record.staffId === currentUser.id) {
+                    renderTodayLog();
+                    renderHistory();
+                }
+                
+                alert('✅ Time record deleted');
+            }
+        }
+
+        // Generate Report
+        function generateReport() {
+            if (currentUser.role !== 'Admin') {
+                alert('⚠️ Admin access required');
+                return;
+            }
+
+            const staffId = document.getElementById('reportStaffSelect').value;
+            const fromDate = document.getElementById('reportFromDate').value;
+            const toDate = document.getElementById('reportToDate').value;
+
+            let filtered = timeRecords.filter(r => r.status === 'completed');
+
+            if (staffId) {
+                filtered = filtered.filter(r => r.staffId === staffId);
+            }
+            if (fromDate) {
+                filtered = filtered.filter(r => r.date >= fromDate);
+            }
+            if (toDate) {
+                filtered = filtered.filter(r => r.date <= toDate);
+            }
+
+            const tbody = document.getElementById('reportsTable');
+            tbody.innerHTML = '';
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-secondary);">No records found</td></tr>';
+                return;
+            }
+
+            filtered.sort((a, b) => new Date(b.date) - new Date(a.date)).forEach(record => {
+                const workTime = (new Date(record.clockOut) - new Date(record.clockIn)) / 1000;
+                const breakTime = record.breaks.reduce((sum, b) => sum + b.duration, 0);
+                const netTime = workTime - breakTime;
+
+                const row = tbody.insertRow();
+                row.innerHTML = `
+                    <td>${record.staffName}</td>
+                    <td><span class="badge ${record.workType === 'Full-Time' ? 'badge-primary' : 'badge-success'}">${record.workType}</span></td>
+                    <td>${new Date(record.date).toLocaleDateString()}</td>
+                    <td>${new Date(record.clockIn).toLocaleTimeString()}</td>
+                    <td>${new Date(record.clockOut).toLocaleTimeString()}</td>
+                    <td>${formatSecondsToHoursMinutes(workTime)}</td>
+                    <td>${formatSecondsToHoursMinutes(breakTime)}</td>
+                    <td><strong>${formatSecondsToHoursMinutes(netTime)}</strong></td>
+                `;
+            });
+        }
+
+        // Utility Functions
+        function formatSecondsToTime(seconds) {
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            const s = seconds % 60;
+            return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+        }
+
+        function formatSecondsToHoursMinutes(seconds) {
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            return `${h}h ${m}m`;
+        }
+
+        // Module Switching
+        function switchModule(moduleId) {
+            document.querySelectorAll('.nav-tab').forEach(tab => tab.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            document.querySelectorAll('.module').forEach(module => module.classList.remove('active'));
+            document.getElementById(moduleId).classList.add('active');
+        }
+
+        // Dark Mode
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+            const isDark = document.body.classList.contains('dark-mode');
+            localStorage.setItem('cestisTimeDarkMode', isDark);
+            
+            document.getElementById('themeIcon').textContent = isDark ? '☀️' : '🌙';
+            document.getElementById('themeText').textContent = isDark ? 'Light' : 'Dark';
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeDefaultAdmin();
+            loadTimeRecords();
+
+            // Check session
+            const savedUser = sessionStorage.getItem('cestisCurrentUser');
+            if (savedUser) {
+                currentUser = JSON.parse(savedUser);
+                document.getElementById('loginPage').style.display = 'none';
+                document.getElementById('mainDashboard').style.display = 'block';
+                document.getElementById('currentUserDisplay').textContent = `👤 ${currentUser.fullName} (${currentUser.workType})`;
+                updateUIForRole();
+                
+                if (currentUser.role !== 'Viewer') {
+                    loadTodaysSession();
+                    renderTodayLog();
+                }
+                renderHistory();
+            }
+
+            // Set dates
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('historyToDate').value = today;
+            document.getElementById('reportToDate').value = today;
+            document.getElementById('editToDate').value = today;
+            
+            const weekAgo = new Date();
+            weekAgo.setDate(weekAgo.getDate() - 7);
+            document.getElementById('historyFromDate').value = weekAgo.toISOString().split('T')[0];
+            document.getElementById('reportFromDate').value = weekAgo.toISOString().split('T')[0];
+            document.getElementById('editFromDate').value = weekAgo.toISOString().split('T')[0];
+
+            // Dark mode
+            const isDark = localStorage.getItem('cestisTimeDarkMode') === 'true';
+            if (isDark) {
+                document.body.classList.add('dark-mode');
+                document.getElementById('themeIcon').textContent = '☀️';
+                document.getElementById('themeText').textContent = 'Light';
+            }
+        });
+
+        // Filter History
+        function filterHistory() {
+            renderHistory();
+        }
+    </script>
+</body>
+</html>
