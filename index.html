@@ -1461,6 +1461,32 @@
             --info-border: #3b82f6;
             --success-bg: #14532d;
         }
+
+        /* Backup File Browser Styles */
+        .backup-file-item {
+            padding: var(--space-4);
+            border-bottom: 1px solid var(--border-light);
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .backup-file-item:hover {
+            background-color: var(--bg-hover, rgba(0, 0, 0, 0.05));
+        }
+
+        .backup-file-item:last-child {
+            border-bottom: none;
+        }
+
+        body.dark-mode .backup-file-item:hover {
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        /* Warning background for dark mode */
+        body.dark-mode {
+            --warning-bg: #78350f;
+            --warning: #f59e0b;
+        }
     </style>
     <!-- Google Identity Services -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -1545,13 +1571,9 @@
                                             <span>Sync from Cloud</span>
                                         </div>
                                         <div class="cloud-dropdown-divider"></div>
-                                        <div class="cloud-dropdown-item" onclick="viewBackupInDrive()" id="viewInDriveItem" style="display: none;">
-                                            <span>📄</span>
-                                            <span>View Backup File</span>
-                                        </div>
-                                        <div class="cloud-dropdown-item" onclick="openDriveFolder()">
+                                        <div class="cloud-dropdown-item" onclick="browseBackupFiles()">
                                             <span>📁</span>
-                                            <span>Open Drive Folder</span>
+                                            <span>Browse All Backups</span>
                                         </div>
                                         <div class="cloud-dropdown-divider"></div>
                                         <div class="last-sync-info" id="lastSyncInfo">
@@ -2161,8 +2183,8 @@
             FOLDER_ID: '11vWe_Nc40TtJ1Hi7PoE7EZ3JrpR-K0Vj',
             // File name for backup
             BACKUP_FILE_NAME: 'Staff_Clock_In_System Data.json',
-            // API scopes needed
-            SCOPES: 'https://www.googleapis.com/auth/drive.file'
+            // API scopes needed - using 'drive' scope to allow access to shared files from any account
+            SCOPES: 'https://www.googleapis.com/auth/drive'
         };
 
         // Cloud sync state
@@ -2218,8 +2240,6 @@
                 connectedDiv.style.display = 'block';
                 statusDot.className = 'cloud-status-dot connected';
                 statusText.textContent = 'Connected';
-                // Update view backup file visibility
-                updateViewInDriveVisibility();
             } else {
                 notConnectedDiv.style.display = 'block';
                 connectedDiv.style.display = 'none';
@@ -2514,7 +2534,6 @@
                         cloudFileId = data.files[0].id;
                         localStorage.setItem('cestisCloudFileId', cloudFileId);
                         console.log('Found existing backup file:', cloudFileId);
-                        updateViewInDriveVisibility();
                     }
                 }
             } catch (error) {
@@ -2664,7 +2683,6 @@
                 lastSavedBy = currentUser ? currentUser.fullName : 'Unknown';
                 cloudFileTimestamp = new Date().toISOString();
                 updateLastSavedByDisplay();
-                updateViewInDriveVisibility();
 
                 setCloudSyncing(false);
 
@@ -2853,11 +2871,8 @@
                             </p>
 
                             <div style="display: flex; flex-direction: column; gap: var(--space-3);">
-                                <button class="btn btn-success" onclick="viewBackupInDrive(); closeCloudSaveSuccessModal();" style="width: 100%;">
-                                    📄 View Backup File
-                                </button>
-                                <button class="btn btn-secondary" onclick="openDriveFolder(); closeCloudSaveSuccessModal();" style="width: 100%;">
-                                    📁 Open Drive Folder
+                                <button class="btn btn-success" onclick="browseBackupFiles(); closeCloudSaveSuccessModal();" style="width: 100%;">
+                                    📁 Browse All Backups
                                 </button>
                                 <button class="btn btn-secondary" onclick="closeCloudSaveSuccessModal()" style="width: 100%;">
                                     Close
@@ -2876,36 +2891,355 @@
             if (modal) modal.remove();
         }
 
-        // View backup file directly in Google Drive
-        function viewBackupInDrive() {
-            const menu = document.getElementById('cloudDropdownMenu');
-            menu.classList.remove('show');
+        // ============================================
+        // FILE BROWSER & SELECTIVE SYNC FUNCTIONALITY
+        // ============================================
 
-            if (!cloudFileId) {
-                alert('No backup file exists yet. Save your data first to create a backup.');
+        // Browse all backup files in the shared folder
+        async function browseBackupFiles() {
+            if (!isCloudConnected || !googleAccessToken) {
+                alert('Please connect to Google Drive first');
                 return;
             }
 
-            // Open the file in Google Drive viewer
-            const viewUrl = `https://drive.google.com/file/d/${cloudFileId}/view`;
-            window.open(viewUrl, '_blank');
-        }
-
-        // Open the Google Drive folder
-        function openDriveFolder() {
             const menu = document.getElementById('cloudDropdownMenu');
             menu.classList.remove('show');
 
-            // Open the folder in Google Drive
-            const folderUrl = `https://drive.google.com/drive/folders/${GOOGLE_DRIVE_CONFIG.FOLDER_ID}`;
-            window.open(folderUrl, '_blank');
+            setCloudSyncing(true);
+
+            try {
+                const files = await listBackupFilesInFolder();
+                setCloudSyncing(false);
+
+                if (files.length === 0) {
+                    alert('📁 No backup files found in the shared folder.\n\nMake sure the folder is shared with your account and contains JSON backup files.');
+                    return;
+                }
+
+                showFileBrowserModal(files);
+            } catch (error) {
+                console.error('Error browsing backup files:', error);
+                setCloudSyncing(false);
+
+                if (error.message.includes('invalid_token') || error.message.includes('Invalid Credentials')) {
+                    alert('❌ Your session has expired. Please reconnect to Google Drive.');
+                    disconnectFromGoogleDrive();
+                } else {
+                    alert(`❌ Failed to browse files: ${error.message}`);
+                }
+            }
         }
 
-        // Update visibility of "View Backup File" option
-        function updateViewInDriveVisibility() {
-            const viewItem = document.getElementById('viewInDriveItem');
-            if (viewItem) {
-                viewItem.style.display = cloudFileId ? 'flex' : 'none';
+        // List all JSON backup files in the shared folder
+        async function listBackupFilesInFolder() {
+            // Search for all JSON files in the shared folder
+            const query = `'${GOOGLE_DRIVE_CONFIG.FOLDER_ID}' in parents and mimeType='application/json' and trashed=false`;
+
+            const response = await fetch(
+                `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=files(id,name,modifiedTime,size,owners,sharingUser)&orderBy=modifiedTime desc`,
+                {
+                    headers: {
+                        'Authorization': `Bearer ${googleAccessToken}`
+                    }
+                }
+            );
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error?.message || 'Failed to list files');
+            }
+
+            const data = await response.json();
+
+            // For each file, try to get additional metadata (savedBy info)
+            const filesWithMetadata = await Promise.all(
+                data.files.map(async (file) => {
+                    try {
+                        const contentResponse = await fetch(
+                            `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`,
+                            {
+                                headers: {
+                                    'Authorization': `Bearer ${googleAccessToken}`
+                                }
+                            }
+                        );
+
+                        if (contentResponse.ok) {
+                            const content = await contentResponse.json();
+                            return {
+                                ...file,
+                                savedBy: content.savedBy || 'Unknown',
+                                backupTimestamp: content.timestamp,
+                                hasValidFormat: content.version && content.data
+                            };
+                        }
+                    } catch (e) {
+                        console.warn('Could not read metadata for file:', file.name);
+                    }
+
+                    return {
+                        ...file,
+                        savedBy: 'Unknown',
+                        backupTimestamp: file.modifiedTime,
+                        hasValidFormat: false
+                    };
+                })
+            );
+
+            return filesWithMetadata;
+        }
+
+        // Show file browser modal
+        function showFileBrowserModal(files) {
+            const existingModal = document.getElementById('fileBrowserModal');
+            if (existingModal) {
+                existingModal.remove();
+            }
+
+            const fileListHTML = files.map(file => {
+                const modifiedDate = new Date(file.modifiedTime);
+                const timeAgo = getTimeAgo(modifiedDate);
+                const dateFormatted = modifiedDate.toLocaleDateString() + ' ' + modifiedDate.toLocaleTimeString();
+                const validBadge = file.hasValidFormat
+                    ? '<span style="background: var(--success); color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; margin-left: 8px;">Valid</span>'
+                    : '<span style="background: var(--warning); color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; margin-left: 8px;">Unknown Format</span>';
+
+                return \`
+                    <div class="backup-file-item" onclick="selectBackupFile('\${file.id}', '\${file.name.replace(/'/g, "\\\\'")}')">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <span style="font-size: 1.5rem;">📄</span>
+                            <div style="flex: 1;">
+                                <div style="font-weight: 600; color: var(--text-primary);">
+                                    \${file.name}\${validBadge}
+                                </div>
+                                <div style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 4px;">
+                                    <span>📅 \${dateFormatted}</span>
+                                    <span style="margin-left: 16px;">👤 Saved by: \${file.savedBy}</span>
+                                </div>
+                                <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 2px;">
+                                    Modified \${timeAgo}
+                                </div>
+                            </div>
+                            <span style="color: var(--accent); font-size: 1.2rem;">→</span>
+                        </div>
+                    </div>
+                \`;
+            }).join('');
+
+            const modalHTML = \`
+                <div id="fileBrowserModal" class="modal" style="display: flex;">
+                    <div class="modal-content" style="max-width: 700px; max-height: 80vh;">
+                        <div class="modal-header">
+                            <h2>📁 Browse Backup Files</h2>
+                            <button class="close-btn" onclick="closeFileBrowserModal()">×</button>
+                        </div>
+                        <div style="padding: var(--space-4);">
+                            <p style="margin-bottom: var(--space-4); color: var(--text-secondary);">
+                                Select a backup file to sync from. Files are sorted by most recent first.
+                            </p>
+                            <div style="background: var(--info-bg); border: 1px solid var(--info-border); border-radius: var(--radius-md); padding: var(--space-3); margin-bottom: var(--space-4);">
+                                <strong style="color: var(--info);">💡 Tip:</strong>
+                                <span style="color: var(--text-secondary); font-size: 0.9rem;">
+                                    Files shared with your account from other users will appear here. You can sync data from any shared backup.
+                                </span>
+                            </div>
+                            <div style="max-height: 400px; overflow-y: auto; border: 1px solid var(--border-light); border-radius: var(--radius-md);">
+                                \${fileListHTML}
+                            </div>
+                            <div style="margin-top: var(--space-4); text-align: center; color: var(--text-muted); font-size: 0.85rem;">
+                                Found \${files.length} backup file\${files.length !== 1 ? 's' : ''} in shared folder
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            \`;
+
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+        }
+
+        // Close file browser modal
+        function closeFileBrowserModal() {
+            const modal = document.getElementById('fileBrowserModal');
+            if (modal) {
+                modal.remove();
+            }
+        }
+
+        // Select a backup file and show sync confirmation
+        async function selectBackupFile(fileId, fileName) {
+            closeFileBrowserModal();
+            setCloudSyncing(true);
+
+            try {
+                // Download the file content
+                const response = await fetch(
+                    \`https://www.googleapis.com/drive/v3/files/\${fileId}?alt=media\`,
+                    {
+                        headers: {
+                            'Authorization': \`Bearer \${googleAccessToken}\`
+                        }
+                    }
+                );
+
+                if (!response.ok) {
+                    throw new Error('Failed to download backup file');
+                }
+
+                const backupData = await response.json();
+                setCloudSyncing(false);
+
+                // Validate backup format
+                if (!backupData.data || !backupData.version) {
+                    alert('❌ Invalid backup file format. This file does not contain valid backup data.');
+                    return;
+                }
+
+                // Show sync confirmation modal
+                showSyncConfirmModal(backupData, fileId, fileName);
+
+            } catch (error) {
+                console.error('Error loading backup file:', error);
+                setCloudSyncing(false);
+                alert(\`❌ Failed to load backup file: \${error.message}\`);
+            }
+        }
+
+        // Show sync confirmation modal
+        function showSyncConfirmModal(backupData, fileId, fileName) {
+            const existingModal = document.getElementById('syncConfirmModal');
+            if (existingModal) {
+                existingModal.remove();
+            }
+
+            const backupTime = new Date(backupData.timestamp).toLocaleString();
+            const savedBy = backupData.savedBy || 'Unknown';
+
+            // Count items in each category
+            const staffCount = backupData.data.staffMembers ? backupData.data.staffMembers.length : 0;
+            const recordsCount = backupData.data.timeRecords ? backupData.data.timeRecords.length : 0;
+
+            const modalHTML = \`
+                <div id="syncConfirmModal" class="modal" style="display: flex;">
+                    <div class="modal-content" style="max-width: 500px;">
+                        <div class="modal-header">
+                            <h2>🔄 Sync from Backup</h2>
+                            <button class="close-btn" onclick="closeSyncConfirmModal()">×</button>
+                        </div>
+                        <div style="padding: var(--space-5);">
+                            <div style="background: var(--bg-tertiary); border-radius: var(--radius-md); padding: var(--space-4); margin-bottom: var(--space-4);">
+                                <div style="font-weight: 600; color: var(--text-primary); margin-bottom: var(--space-2);">
+                                    📄 \${fileName}
+                                </div>
+                                <div style="font-size: 0.9rem; color: var(--text-secondary);">
+                                    <div>📅 \${backupTime}</div>
+                                    <div style="margin-top: 4px;">👤 Saved by: \${savedBy}</div>
+                                </div>
+                            </div>
+
+                            <div style="margin-bottom: var(--space-4);">
+                                <div style="font-weight: 600; margin-bottom: var(--space-2);">Backup contains:</div>
+                                <div style="display: flex; flex-direction: column; gap: var(--space-2);">
+                                    <div style="display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2); background: var(--bg-secondary); border-radius: var(--radius-sm);">
+                                        <span>👥</span>
+                                        <span>Staff Members: <strong>\${staffCount}</strong></span>
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2); background: var(--bg-secondary); border-radius: var(--radius-sm);">
+                                        <span>⏰</span>
+                                        <span>Time Records: <strong>\${recordsCount}</strong></span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div style="background: var(--warning-bg); border: 1px solid var(--warning); border-radius: var(--radius-md); padding: var(--space-3); margin-bottom: var(--space-4);">
+                                <strong style="color: var(--warning);">⚠️ Warning:</strong>
+                                <span style="color: var(--text-secondary); font-size: 0.9rem;">
+                                    This will <strong>replace</strong> your current local data with this backup.
+                                </span>
+                            </div>
+
+                            <div style="display: flex; gap: var(--space-3);">
+                                <button class="btn btn-secondary" onclick="closeSyncConfirmModal()" style="flex: 1;">
+                                    Cancel
+                                </button>
+                                <button class="btn btn-success" onclick="performSyncFromFile('\${fileId}')" style="flex: 1;">
+                                    🔄 Sync Now
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            \`;
+
+            // Store backup data for later use
+            window.pendingBackupData = backupData;
+
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+        }
+
+        // Close sync confirmation modal
+        function closeSyncConfirmModal() {
+            const modal = document.getElementById('syncConfirmModal');
+            if (modal) {
+                modal.remove();
+            }
+            window.pendingBackupData = null;
+        }
+
+        // Perform sync from selected file
+        async function performSyncFromFile(fileId) {
+            const backupData = window.pendingBackupData;
+            if (!backupData) {
+                alert('❌ Backup data not found. Please try again.');
+                closeSyncConfirmModal();
+                return;
+            }
+
+            closeSyncConfirmModal();
+            setCloudSyncing(true);
+
+            try {
+                // Restore data
+                if (backupData.data.staffMembers) {
+                    staffMembers = backupData.data.staffMembers;
+                    saveStaffMembers();
+                }
+
+                if (backupData.data.timeRecords) {
+                    timeRecords = backupData.data.timeRecords;
+                    saveTimeRecords();
+                }
+
+                // Update sync tracking
+                lastSyncTime = new Date();
+                localStorage.setItem('cestisLastSyncTime', lastSyncTime.toISOString());
+                updateLastSyncDisplay();
+
+                // Update last saved by info
+                lastSavedBy = backupData.savedBy || 'Unknown';
+                cloudFileTimestamp = backupData.timestamp;
+                updateLastSavedByDisplay();
+
+                // Cache the file ID as our primary sync file
+                cloudFileId = fileId;
+                localStorage.setItem('cestisCloudFileId', cloudFileId);
+
+                // Refresh UI
+                renderTodayLog();
+                renderHistory();
+                if (currentUser && currentUser.role === 'Admin') {
+                    renderStaffTable();
+                }
+
+                setCloudSyncing(false);
+
+                const staffCount = backupData.data.staffMembers ? backupData.data.staffMembers.length : 0;
+                const recordsCount = backupData.data.timeRecords ? backupData.data.timeRecords.length : 0;
+                alert(\`✅ Sync completed successfully!\n\nSynced:\n• \${staffCount} staff members\n• \${recordsCount} time records\n\nFrom backup saved by: \${lastSavedBy}\`);
+
+            } catch (error) {
+                console.error('Error performing sync:', error);
+                setCloudSyncing(false);
+                alert(\`❌ Failed to sync data: \${error.message}\`);
             }
         }
 
