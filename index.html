@@ -1545,6 +1545,15 @@
                                             <span>Sync from Cloud</span>
                                         </div>
                                         <div class="cloud-dropdown-divider"></div>
+                                        <div class="cloud-dropdown-item" onclick="viewBackupInDrive()" id="viewInDriveItem" style="display: none;">
+                                            <span>📄</span>
+                                            <span>View Backup File</span>
+                                        </div>
+                                        <div class="cloud-dropdown-item" onclick="openDriveFolder()">
+                                            <span>📁</span>
+                                            <span>Open Drive Folder</span>
+                                        </div>
+                                        <div class="cloud-dropdown-divider"></div>
                                         <div class="last-sync-info" id="lastSyncInfo">
                                             Last sync: Never
                                         </div>
@@ -2209,6 +2218,8 @@
                 connectedDiv.style.display = 'block';
                 statusDot.className = 'cloud-status-dot connected';
                 statusText.textContent = 'Connected';
+                // Update view backup file visibility
+                updateViewInDriveVisibility();
             } else {
                 notConnectedDiv.style.display = 'block';
                 connectedDiv.style.display = 'none';
@@ -2503,6 +2514,7 @@
                         cloudFileId = data.files[0].id;
                         localStorage.setItem('cestisCloudFileId', cloudFileId);
                         console.log('Found existing backup file:', cloudFileId);
+                        updateViewInDriveVisibility();
                     }
                 }
             } catch (error) {
@@ -2652,9 +2664,12 @@
                 lastSavedBy = currentUser ? currentUser.fullName : 'Unknown';
                 cloudFileTimestamp = new Date().toISOString();
                 updateLastSavedByDisplay();
+                updateViewInDriveVisibility();
 
                 setCloudSyncing(false);
-                alert(`✅ Data saved to Google Drive successfully!\n\nSaved by: ${lastSavedBy}\n\n💡 Tip: Let other users know to sync from cloud to get your changes.`);
+
+                // Show success with option to view file
+                showCloudSaveSuccess();
 
             } catch (error) {
                 console.error('Error saving to cloud:', error);
@@ -2802,6 +2817,96 @@
             if (diffMins < 60) return `${diffMins} min${diffMins > 1 ? 's' : ''} ago`;
             if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
             return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+        }
+
+        // Show success modal after saving to cloud
+        function showCloudSaveSuccess() {
+            const modalHTML = `
+                <div id="cloudSaveSuccessModal" class="modal" style="display: flex;">
+                    <div class="modal-content" style="max-width: 450px;">
+                        <div class="modal-header" style="background: linear-gradient(135deg, #22c55e, #16a34a); color: white;">
+                            <h2 style="color: white;">✅ Saved Successfully!</h2>
+                            <button class="close-btn" onclick="closeCloudSaveSuccessModal()" style="color: white;">×</button>
+                        </div>
+                        <div style="padding: var(--space-6);">
+                            <p style="margin-bottom: var(--space-4); color: var(--text-secondary); text-align: center;">
+                                Your data has been saved to Google Drive.
+                            </p>
+
+                            <div style="background: var(--bg-tertiary); border-radius: var(--radius-md); padding: var(--space-4); margin-bottom: var(--space-4);">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: var(--space-2);">
+                                    <span style="color: var(--text-muted);">File:</span>
+                                    <span style="color: var(--text-primary); font-weight: 600;">${GOOGLE_DRIVE_CONFIG.BACKUP_FILE_NAME}</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; margin-bottom: var(--space-2);">
+                                    <span style="color: var(--text-muted);">Saved by:</span>
+                                    <span style="color: var(--text-primary); font-weight: 600;">${lastSavedBy}</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between;">
+                                    <span style="color: var(--text-muted);">Time:</span>
+                                    <span style="color: var(--text-primary); font-weight: 600;">${new Date().toLocaleString()}</span>
+                                </div>
+                            </div>
+
+                            <p style="font-size: 0.85rem; color: var(--text-muted); text-align: center; margin-bottom: var(--space-4);">
+                                💡 Let other users know to sync from cloud to get your changes.
+                            </p>
+
+                            <div style="display: flex; flex-direction: column; gap: var(--space-3);">
+                                <button class="btn btn-success" onclick="viewBackupInDrive(); closeCloudSaveSuccessModal();" style="width: 100%;">
+                                    📄 View Backup File
+                                </button>
+                                <button class="btn btn-secondary" onclick="openDriveFolder(); closeCloudSaveSuccessModal();" style="width: 100%;">
+                                    📁 Open Drive Folder
+                                </button>
+                                <button class="btn btn-secondary" onclick="closeCloudSaveSuccessModal()" style="width: 100%;">
+                                    Close
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+        }
+
+        function closeCloudSaveSuccessModal() {
+            const modal = document.getElementById('cloudSaveSuccessModal');
+            if (modal) modal.remove();
+        }
+
+        // View backup file directly in Google Drive
+        function viewBackupInDrive() {
+            const menu = document.getElementById('cloudDropdownMenu');
+            menu.classList.remove('show');
+
+            if (!cloudFileId) {
+                alert('No backup file exists yet. Save your data first to create a backup.');
+                return;
+            }
+
+            // Open the file in Google Drive viewer
+            const viewUrl = `https://drive.google.com/file/d/${cloudFileId}/view`;
+            window.open(viewUrl, '_blank');
+        }
+
+        // Open the Google Drive folder
+        function openDriveFolder() {
+            const menu = document.getElementById('cloudDropdownMenu');
+            menu.classList.remove('show');
+
+            // Open the folder in Google Drive
+            const folderUrl = `https://drive.google.com/drive/folders/${GOOGLE_DRIVE_CONFIG.FOLDER_ID}`;
+            window.open(folderUrl, '_blank');
+        }
+
+        // Update visibility of "View Backup File" option
+        function updateViewInDriveVisibility() {
+            const viewItem = document.getElementById('viewInDriveItem');
+            if (viewItem) {
+                viewItem.style.display = cloudFileId ? 'flex' : 'none';
+            }
         }
 
         // Initialize default admin
