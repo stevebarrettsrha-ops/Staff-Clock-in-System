@@ -3218,12 +3218,25 @@
                     );
 
                     if (response.ok) {
-                        cloudData = await response.json();
+                        try {
+                            cloudData = await response.json();
+                            console.log('Cloud data loaded:', cloudData);
+                        } catch (parseError) {
+                            console.error('Failed to parse cloud data:', parseError);
+                            cloudData = null;
+                        }
                     }
+                }
+
+                // Ensure cloudData has the expected structure
+                if (cloudData && !cloudData.data) {
+                    console.warn('Cloud data missing "data" property, initializing empty structure');
+                    cloudData = { data: { staffMembers: [], timeRecords: [] }, version: '1.0' };
                 }
 
                 cloudDataForMerge = cloudData;
                 mergeAnalysis = analyzeDataForMerge(cloudData);
+                console.log('Merge analysis:', mergeAnalysis);
                 displayMergeAnalysis(mergeAnalysis, cloudData);
 
             } catch (error) {
@@ -3677,14 +3690,23 @@
                     );
 
                     if (response.ok) {
-                        cloudData = await response.json();
-                        // Robust null checking for cloud data structure
-                        if (cloudData && cloudData.data) {
-                            existingStaff = Array.isArray(cloudData.data.staffMembers) ? cloudData.data.staffMembers : [];
-                            existingRecords = Array.isArray(cloudData.data.timeRecords) ? cloudData.data.timeRecords : [];
+                        try {
+                            cloudData = await response.json();
+                            console.log('Staff merge - Cloud data loaded:', cloudData);
+                            // Robust null checking for cloud data structure
+                            if (cloudData && cloudData.data) {
+                                existingStaff = Array.isArray(cloudData.data.staffMembers) ? cloudData.data.staffMembers : [];
+                                existingRecords = Array.isArray(cloudData.data.timeRecords) ? cloudData.data.timeRecords : [];
+                            }
+                        } catch (parseError) {
+                            console.error('Failed to parse cloud data:', parseError);
+                            // Continue with empty arrays
                         }
                     }
                 }
+
+                console.log('Local staff count:', staffMembers.length, 'Local records count:', timeRecords.length);
+                console.log('Cloud staff count:', existingStaff.length, 'Cloud records count:', existingRecords.length);
 
                 // Merge staff members (add new local ones to cloud)
                 const mergedStaff = [...existingStaff];
