@@ -1808,6 +1808,10 @@
                     <p class="timer-label" id="timerLabel">Working Time</p>
                 </div>
 
+                <div id="resumedSessionBanner" style="display: none; background: linear-gradient(135deg, #fef3c7, #fde68a); border: 1px solid #f59e0b; border-radius: 12px; padding: 0.75rem 1rem; margin-bottom: 1rem; text-align: center;">
+                    <span style="color: #92400e; font-weight: 600;">🔄 Session resumed from <span id="resumedSessionTime"></span></span>
+                </div>
+
                 <div class="status-grid">
                     <div class="status-item">
                         <div class="status-label">Status</div>
@@ -4990,7 +4994,7 @@
         // Complete login after password check
         function completeLogin(staff) {
             currentUser = staff;
-            sessionStorage.setItem('cestisCurrentUser', JSON.stringify(staff));
+            localStorage.setItem('cestisCurrentUser', JSON.stringify(staff));
 
             document.getElementById('loginPage').style.display = 'none';
             document.getElementById('mainDashboard').style.display = 'block';
@@ -5363,9 +5367,15 @@
             if (confirm('Are you sure you want to logout?')) {
                 currentUser = null;
                 currentSession = null;
-                sessionStorage.removeItem('cestisCurrentUser');
+                localStorage.removeItem('cestisCurrentUser');
                 clearInterval(timerInterval);
-                
+
+                // Hide resumed session banner on logout
+                const resumedBanner = document.getElementById('resumedSessionBanner');
+                if (resumedBanner) {
+                    resumedBanner.style.display = 'none';
+                }
+
                 document.getElementById('loginPage').style.display = 'flex';
                 document.getElementById('mainDashboard').style.display = 'none';
                 document.getElementById('loginUsername').value = '';
@@ -5448,6 +5458,12 @@
             startTimer();
             renderTodayLog();
 
+            // Hide resumed session banner for fresh clock-in
+            const resumedBanner = document.getElementById('resumedSessionBanner');
+            if (resumedBanner) {
+                resumedBanner.style.display = 'none';
+            }
+
             showToast('Clocked in successfully! Have a productive day.', 'success');
         }
 
@@ -5516,6 +5532,12 @@
                 updateClockInterface();
                 renderTodayLog();
                 renderHistory();
+
+                // Hide resumed session banner on clock out
+                const resumedBanner = document.getElementById('resumedSessionBanner');
+                if (resumedBanner) {
+                    resumedBanner.style.display = 'none';
+                }
 
                 showToast('Clocked out successfully! Great work today.', 'success');
             }
@@ -5618,17 +5640,35 @@
         // Load Today's Session
         function loadTodaysSession() {
             const today = new Date().toISOString().split('T')[0];
-            const todaysSessions = timeRecords.filter(r => 
-                r.staffId === currentUser.id && 
-                r.date === today && 
+            const todaysSessions = timeRecords.filter(r =>
+                r.staffId === currentUser.id &&
+                r.date === today &&
                 r.status !== 'completed'
             );
+
+            // Hide resumed session banner by default
+            const resumedBanner = document.getElementById('resumedSessionBanner');
+            if (resumedBanner) {
+                resumedBanner.style.display = 'none';
+            }
 
             if (todaysSessions.length > 0) {
                 currentSession = todaysSessions[todaysSessions.length - 1];
                 updateClockInterface();
                 if (currentSession.status === 'working' || currentSession.status === 'break') {
                     startTimer();
+
+                    // Show resumed session indicator
+                    const clockInTime = new Date(currentSession.clockIn).toLocaleTimeString();
+                    if (resumedBanner) {
+                        document.getElementById('resumedSessionTime').textContent = clockInTime;
+                        resumedBanner.style.display = 'block';
+                    }
+
+                    // Show toast notification for resumed session
+                    setTimeout(() => {
+                        showToast(`Session resumed from ${clockInTime}. Your timer continues from where you left off.`, 'info');
+                    }, 500);
                 }
             }
         }
@@ -7530,7 +7570,7 @@
             loadTimeRecords();
 
             // Check session
-            const savedUser = sessionStorage.getItem('cestisCurrentUser');
+            const savedUser = localStorage.getItem('cestisCurrentUser');
             if (savedUser) {
                 currentUser = JSON.parse(savedUser);
                 document.getElementById('loginPage').style.display = 'none';
