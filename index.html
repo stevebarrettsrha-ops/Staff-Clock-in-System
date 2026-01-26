@@ -1761,9 +1761,9 @@
                                         <span style="font-size: 0.6rem;">▼</span>
                                     </button>
                                     <div class="cloud-dropdown-content" id="cloudDropdownMenu">
-                                        <div class="cloud-dropdown-item" onclick="saveToCloud()">
-                                            <span>💾</span>
-                                            <span>Save to Cloud</span>
+                                        <div class="cloud-dropdown-item" onclick="mergeToCloud()" style="background: linear-gradient(135deg, #9C27B0 0%, #E91E63 100%); color: white;">
+                                            <span>🔀</span>
+                                            <span>Merge to Cloud</span>
                                         </div>
                                         <div class="cloud-dropdown-item" onclick="syncFromCloud()">
                                             <span>🔄</span>
@@ -2356,6 +2356,72 @@
             <div style="display: flex; gap: 1rem; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--border-color);">
                 <button class="btn btn-success" onclick="saveTimeRecordEdit()">Save Changes</button>
                 <button class="btn btn-secondary" onclick="closeEditTimeModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Smart Merge Cloud Sync Modal (Admin Only) -->
+    <div id="smartMergeModal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); z-index: 1000; justify-content: center; align-items: center;">
+        <div class="modal-content" style="max-width: 1000px; max-height: 90vh; overflow: hidden; display: flex; flex-direction: column; background: var(--bg-secondary); border-radius: 24px; box-shadow: var(--shadow-xl); animation: slideUp 0.3s ease;">
+            <div class="modal-header" style="background: linear-gradient(135deg, #9C27B0 0%, #E91E63 100%); padding: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
+                <h2 style="color: white; margin: 0; font-weight: 700;">🔀 Smart Merge to Cloud</h2>
+                <button class="close-btn" onclick="closeSmartMergeModal()" style="color: white; background: none; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
+            </div>
+            <div style="padding: 1.5rem; overflow-y: auto; flex: 1;">
+                <div id="smartMergeLoading" style="text-align: center; padding: 2rem;">
+                    <div style="font-size: 2rem; margin-bottom: 1rem;">🔄</div>
+                    <p>Analyzing cloud data and detecting changes...</p>
+                </div>
+                <div id="smartMergeContent" style="display: none;">
+                    <!-- Summary Section -->
+                    <div id="mergeSummary" style="background: var(--bg-tertiary); padding: 1rem; border-radius: 0.5rem; margin-bottom: 1.5rem;"></div>
+
+                    <!-- Conflicts Section -->
+                    <div id="cloudConflictsSection" style="display: none; margin-bottom: 1.5rem;">
+                        <h3 style="color: #E91E63; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                            <span>⚠️</span> Potential Conflicts Detected
+                        </h3>
+                        <div id="cloudConflictsList"></div>
+                    </div>
+
+                    <!-- New Records Section -->
+                    <div id="newRecordsSection" style="display: none; margin-bottom: 1.5rem;">
+                        <h3 style="color: #4CAF50; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                            <span>➕</span> New Records to Merge
+                        </h3>
+                        <div id="newRecordsList"></div>
+                    </div>
+
+                    <!-- Merge Options -->
+                    <div style="background: #E3F2FD; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1rem;">
+                        <h4 style="color: #1565C0; margin-bottom: 0.75rem;">Merge Options</h4>
+                        <div class="form-group" style="margin-bottom: 0.5rem;">
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                <input type="checkbox" id="mergeSkipDuplicates" checked style="width: 18px; height: 18px;">
+                                <span>Skip records that appear to be duplicates</span>
+                            </label>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0.5rem;">
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                <input type="checkbox" id="mergeUpdateExisting" style="width: 18px; height: 18px;">
+                                <span>Update existing records with newer data (if timestamps available)</span>
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                <input type="checkbox" id="mergeAddNewOnly" checked style="width: 18px; height: 18px;">
+                                <span>Add new unique records from local data</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="btn-group" style="margin-top: 1.5rem; display: flex; gap: 1rem;">
+                    <button class="btn" id="executeMergeBtn" onclick="executeSmartMerge()" style="background: linear-gradient(135deg, #9C27B0 0%, #E91E63 100%); color: white; flex: 1; padding: 0.75rem; border-radius: 0.5rem; border: none; cursor: pointer; font-weight: 600;" disabled>
+                        Execute Smart Merge
+                    </button>
+                    <button class="btn btn-secondary" onclick="closeSmartMergeModal()" style="flex: 1; padding: 0.75rem; border-radius: 0.5rem;">Cancel</button>
+                </div>
             </div>
         </div>
     </div>
@@ -3095,6 +3161,765 @@
         function closeCloudSaveSuccessModal() {
             const modal = document.getElementById('cloudSaveSuccessModal');
             if (modal) modal.remove();
+        }
+
+        // ============================================
+        // SMART MERGE TO CLOUD FUNCTIONALITY
+        // ============================================
+
+        // Track merge state
+        let cloudDataForMerge = null;
+        let mergeAnalysis = null;
+
+        // Main function to initiate merge to cloud
+        async function mergeToCloud() {
+            if (!isCloudConnected || !googleAccessToken) {
+                alert('Please connect to Google Drive first');
+                return;
+            }
+
+            const menu = document.getElementById('cloudDropdownMenu');
+            menu.classList.remove('show');
+
+            // Check if user is Admin - only admins see the full modal
+            if (currentUser && currentUser.role === 'Admin') {
+                // Admin: Show the full merge modal
+                await openSmartMergeModal();
+            } else {
+                // Staff: Just perform merge and show notification
+                await performStaffMerge();
+            }
+        }
+
+        // Admin: Open the smart merge modal with analysis
+        async function openSmartMergeModal() {
+            // First try to find the file if we don't have the ID
+            if (!cloudFileId) {
+                await findExistingBackupFile();
+            }
+
+            document.getElementById('smartMergeLoading').style.display = 'block';
+            document.getElementById('smartMergeContent').style.display = 'none';
+            document.getElementById('executeMergeBtn').disabled = true;
+            document.getElementById('smartMergeModal').style.display = 'flex';
+
+            try {
+                let cloudData = null;
+
+                if (cloudFileId) {
+                    // Download existing cloud data
+                    const response = await fetch(
+                        `https://www.googleapis.com/drive/v3/files/${cloudFileId}?alt=media`,
+                        {
+                            headers: {
+                                'Authorization': `Bearer ${googleAccessToken}`
+                            }
+                        }
+                    );
+
+                    if (response.ok) {
+                        cloudData = await response.json();
+                    }
+                }
+
+                cloudDataForMerge = cloudData;
+                mergeAnalysis = analyzeDataForMerge(cloudData);
+                displayMergeAnalysis(mergeAnalysis, cloudData);
+
+            } catch (error) {
+                console.error('Error loading cloud data for merge:', error);
+                closeSmartMergeModal();
+
+                if (error.message.includes('invalid_token') || error.message.includes('Invalid Credentials')) {
+                    alert('Your session has expired. Please reconnect to Google Drive.');
+                    disconnectFromGoogleDrive();
+                } else {
+                    alert(`Failed to load cloud data: ${error.message}`);
+                }
+            }
+        }
+
+        // Analyze local and cloud data for merge
+        function analyzeDataForMerge(cloudData) {
+            const analysis = {
+                staffMembers: { conflicts: [], newLocal: [], newCloud: [], total: 0 },
+                timeRecords: { conflicts: [], newLocal: [], newCloud: [], total: 0 }
+            };
+
+            const cloudStaff = cloudData?.data?.staffMembers || [];
+            const cloudRecords = cloudData?.data?.timeRecords || [];
+
+            // Analyze staff members
+            analysis.staffMembers.total = staffMembers.length;
+
+            staffMembers.forEach(localStaff => {
+                const cloudMatch = cloudStaff.find(cs => cs.id === localStaff.id || cs.username === localStaff.username);
+                if (!cloudMatch) {
+                    analysis.staffMembers.newLocal.push(localStaff);
+                } else if (JSON.stringify(localStaff) !== JSON.stringify(cloudMatch)) {
+                    analysis.staffMembers.conflicts.push({
+                        local: localStaff,
+                        cloud: cloudMatch,
+                        reasons: detectStaffDifferences(localStaff, cloudMatch)
+                    });
+                }
+            });
+
+            cloudStaff.forEach(cloudStaff => {
+                const localMatch = staffMembers.find(ls => ls.id === cloudStaff.id || ls.username === cloudStaff.username);
+                if (!localMatch) {
+                    analysis.staffMembers.newCloud.push(cloudStaff);
+                }
+            });
+
+            // Analyze time records
+            analysis.timeRecords.total = timeRecords.length;
+
+            timeRecords.forEach(localRecord => {
+                const cloudMatch = cloudRecords.find(cr => cr.id === localRecord.id);
+                if (!cloudMatch) {
+                    analysis.timeRecords.newLocal.push(localRecord);
+                } else if (JSON.stringify(localRecord) !== JSON.stringify(cloudMatch)) {
+                    analysis.timeRecords.conflicts.push({
+                        local: localRecord,
+                        cloud: cloudMatch,
+                        reasons: detectRecordDifferences(localRecord, cloudMatch)
+                    });
+                }
+            });
+
+            cloudRecords.forEach(cloudRecord => {
+                const localMatch = timeRecords.find(lr => lr.id === cloudRecord.id);
+                if (!localMatch) {
+                    analysis.timeRecords.newCloud.push(cloudRecord);
+                }
+            });
+
+            return analysis;
+        }
+
+        // Detect differences between staff records
+        function detectStaffDifferences(local, cloud) {
+            const reasons = [];
+            const fieldsToCheck = ['fullName', 'role', 'status', 'workType', 'department', 'email', 'phone'];
+
+            fieldsToCheck.forEach(field => {
+                if (local[field] !== cloud[field]) {
+                    reasons.push(`${field}: "${local[field] || '-'}" vs "${cloud[field] || '-'}"`);
+                }
+            });
+
+            return reasons;
+        }
+
+        // Detect differences between time records
+        function detectRecordDifferences(local, cloud) {
+            const reasons = [];
+
+            if (local.clockIn !== cloud.clockIn) reasons.push('Different clock-in time');
+            if (local.clockOut !== cloud.clockOut) reasons.push('Different clock-out time');
+            if (local.status !== cloud.status) reasons.push('Different status');
+            if (JSON.stringify(local.breaks) !== JSON.stringify(cloud.breaks)) reasons.push('Different breaks');
+
+            return reasons;
+        }
+
+        // Display merge analysis in the modal
+        function displayMergeAnalysis(analysis, cloudData) {
+            document.getElementById('smartMergeLoading').style.display = 'none';
+            document.getElementById('smartMergeContent').style.display = 'block';
+            document.getElementById('executeMergeBtn').disabled = false;
+
+            const cloudTime = cloudData?.timestamp ? new Date(cloudData.timestamp).toLocaleString() : 'No backup found';
+            const savedBy = cloudData?.savedBy || 'N/A';
+
+            const totalNewLocal = analysis.staffMembers.newLocal.length + analysis.timeRecords.newLocal.length;
+            const totalNewCloud = analysis.staffMembers.newCloud.length + analysis.timeRecords.newCloud.length;
+            const totalConflicts = analysis.staffMembers.conflicts.length + analysis.timeRecords.conflicts.length;
+
+            let summaryHtml = `
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem;">
+                    <div style="text-align: center; padding: 1rem; background: var(--bg-card); border-radius: 0.5rem;">
+                        <div style="font-size: 0.85rem; color: var(--text-secondary);">Cloud Backup</div>
+                        <div style="font-size: 0.9rem; margin-top: 0.25rem;">${cloudTime}</div>
+                        <div style="font-size: 0.8rem; color: var(--text-secondary);">by ${savedBy}</div>
+                    </div>
+                    <div style="text-align: center; padding: 1rem; background: #E8F5E9; border-radius: 0.5rem;">
+                        <div style="font-size: 2rem; font-weight: bold; color: #4CAF50;">${totalNewLocal}</div>
+                        <div style="font-size: 0.85rem; color: #2E7D32;">New Local Records</div>
+                    </div>
+                    <div style="text-align: center; padding: 1rem; background: #E3F2FD; border-radius: 0.5rem;">
+                        <div style="font-size: 2rem; font-weight: bold; color: #2196F3;">${totalNewCloud}</div>
+                        <div style="font-size: 0.85rem; color: #1565C0;">New Cloud Records</div>
+                    </div>
+                    <div style="text-align: center; padding: 1rem; background: #FFF3E0; border-radius: 0.5rem;">
+                        <div style="font-size: 2rem; font-weight: bold; color: #FF9800;">${totalConflicts}</div>
+                        <div style="font-size: 0.85rem; color: #E65100;">Potential Conflicts</div>
+                    </div>
+                </div>
+                <div style="margin-top: 1rem; padding: 0.75rem; background: var(--bg-card); border-radius: 0.5rem;">
+                    <strong>Local has:</strong> ${staffMembers.length} staff, ${timeRecords.length} time records
+                    <br>
+                    <strong>Cloud has:</strong> ${cloudData?.data?.staffMembers?.length || 0} staff, ${cloudData?.data?.timeRecords?.length || 0} time records
+                </div>`;
+
+            document.getElementById('mergeSummary').innerHTML = summaryHtml;
+
+            // Display conflicts
+            if (totalConflicts > 0) {
+                document.getElementById('cloudConflictsSection').style.display = 'block';
+                let conflictHtml = '<div style="max-height: 250px; overflow-y: auto;">';
+
+                analysis.staffMembers.conflicts.forEach((conflict, idx) => {
+                    conflictHtml += `
+                        <div style="background: #FFF8E1; padding: 0.75rem; border-radius: 0.5rem; margin-bottom: 0.5rem; border-left: 3px solid #FF9800;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <strong style="color: #E65100;">Staff:</strong> ${conflict.local.fullName}
+                                    <span style="background: #FFE0B2; padding: 0.125rem 0.5rem; border-radius: 0.25rem; font-size: 0.75rem; margin-left: 0.5rem;">
+                                        ${conflict.reasons.length} difference(s)
+                                    </span>
+                                </div>
+                                <label style="display: flex; align-items: center; gap: 0.25rem; font-size: 0.85rem;">
+                                    <input type="checkbox" class="conflict-override" data-type="staff" data-idx="${idx}" checked>
+                                    Use local
+                                </label>
+                            </div>
+                            <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.25rem;">
+                                ${conflict.reasons.slice(0, 2).join(', ')}${conflict.reasons.length > 2 ? '...' : ''}
+                            </div>
+                        </div>`;
+                });
+
+                analysis.timeRecords.conflicts.forEach((conflict, idx) => {
+                    conflictHtml += `
+                        <div style="background: #FFF8E1; padding: 0.75rem; border-radius: 0.5rem; margin-bottom: 0.5rem; border-left: 3px solid #FF9800;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <strong style="color: #E65100;">Record:</strong> ${conflict.local.staffName} - ${conflict.local.date}
+                                    <span style="background: #FFE0B2; padding: 0.125rem 0.5rem; border-radius: 0.25rem; font-size: 0.75rem; margin-left: 0.5rem;">
+                                        ${conflict.reasons.join(', ')}
+                                    </span>
+                                </div>
+                                <label style="display: flex; align-items: center; gap: 0.25rem; font-size: 0.85rem;">
+                                    <input type="checkbox" class="conflict-override" data-type="record" data-idx="${idx}" checked>
+                                    Use local
+                                </label>
+                            </div>
+                        </div>`;
+                });
+
+                conflictHtml += '</div>';
+                document.getElementById('cloudConflictsList').innerHTML = conflictHtml;
+            } else {
+                document.getElementById('cloudConflictsSection').style.display = 'none';
+            }
+
+            // Display new records
+            const totalNew = totalNewLocal + totalNewCloud;
+            if (totalNew > 0) {
+                document.getElementById('newRecordsSection').style.display = 'block';
+                let newHtml = '<div style="max-height: 200px; overflow-y: auto;">';
+
+                analysis.staffMembers.newLocal.forEach(staff => {
+                    newHtml += `
+                        <div style="background: #E8F5E9; padding: 0.5rem 0.75rem; border-radius: 0.25rem; margin-bottom: 0.25rem; display: flex; justify-content: space-between;">
+                            <span><strong>Local Staff:</strong> ${staff.fullName} (${staff.role})</span>
+                            <span style="color: #4CAF50;">Will be added to cloud</span>
+                        </div>`;
+                });
+
+                analysis.staffMembers.newCloud.forEach(staff => {
+                    newHtml += `
+                        <div style="background: #E3F2FD; padding: 0.5rem 0.75rem; border-radius: 0.25rem; margin-bottom: 0.25rem; display: flex; justify-content: space-between;">
+                            <span><strong>Cloud Staff:</strong> ${staff.fullName} (${staff.role})</span>
+                            <span style="color: #2196F3;">Will be added locally</span>
+                        </div>`;
+                });
+
+                analysis.timeRecords.newLocal.forEach(record => {
+                    newHtml += `
+                        <div style="background: #E8F5E9; padding: 0.5rem 0.75rem; border-radius: 0.25rem; margin-bottom: 0.25rem; display: flex; justify-content: space-between;">
+                            <span><strong>Local Record:</strong> ${record.staffName} - ${record.date}</span>
+                            <span style="color: #4CAF50;">Will be added to cloud</span>
+                        </div>`;
+                });
+
+                analysis.timeRecords.newCloud.forEach(record => {
+                    newHtml += `
+                        <div style="background: #E3F2FD; padding: 0.5rem 0.75rem; border-radius: 0.25rem; margin-bottom: 0.25rem; display: flex; justify-content: space-between;">
+                            <span><strong>Cloud Record:</strong> ${record.staffName} - ${record.date}</span>
+                            <span style="color: #2196F3;">Will be added locally</span>
+                        </div>`;
+                });
+
+                newHtml += '</div>';
+                document.getElementById('newRecordsList').innerHTML = newHtml;
+            } else {
+                document.getElementById('newRecordsSection').style.display = 'none';
+            }
+        }
+
+        // Execute the smart merge (Admin)
+        async function executeSmartMerge() {
+            if (!mergeAnalysis) {
+                alert('No merge analysis available. Please try again.');
+                return;
+            }
+
+            const skipDuplicates = document.getElementById('mergeSkipDuplicates').checked;
+            const addNewOnly = document.getElementById('mergeAddNewOnly').checked;
+
+            setCloudSyncing(true);
+
+            try {
+                // Get conflict resolution preferences
+                const useLocalStaff = new Set();
+                const useLocalRecords = new Set();
+                document.querySelectorAll('.conflict-override:checked').forEach(cb => {
+                    if (cb.dataset.type === 'staff') useLocalStaff.add(parseInt(cb.dataset.idx));
+                    if (cb.dataset.type === 'record') useLocalRecords.add(parseInt(cb.dataset.idx));
+                });
+
+                // Build merged staff list
+                const mergedStaff = [...staffMembers];
+
+                // Add new staff from cloud
+                if (addNewOnly) {
+                    mergeAnalysis.staffMembers.newCloud.forEach(cloudStaff => {
+                        if (!mergedStaff.find(s => s.id === cloudStaff.id || s.username === cloudStaff.username)) {
+                            mergedStaff.push({ ...cloudStaff });
+                        }
+                    });
+                }
+
+                // Handle conflicts - use local by default (checkbox is checked)
+                mergeAnalysis.staffMembers.conflicts.forEach((conflict, idx) => {
+                    if (!useLocalStaff.has(idx)) {
+                        // Use cloud version
+                        const localIdx = mergedStaff.findIndex(s => s.id === conflict.local.id);
+                        if (localIdx !== -1) {
+                            mergedStaff[localIdx] = { ...conflict.cloud };
+                        }
+                    }
+                });
+
+                // Build merged time records list
+                const mergedRecords = [...timeRecords];
+
+                // Add new records from cloud
+                if (addNewOnly) {
+                    mergeAnalysis.timeRecords.newCloud.forEach(cloudRecord => {
+                        if (!mergedRecords.find(r => r.id === cloudRecord.id)) {
+                            mergedRecords.push({ ...cloudRecord });
+                        }
+                    });
+                }
+
+                // Handle record conflicts
+                mergeAnalysis.timeRecords.conflicts.forEach((conflict, idx) => {
+                    if (!useLocalRecords.has(idx)) {
+                        // Use cloud version
+                        const localIdx = mergedRecords.findIndex(r => r.id === conflict.local.id);
+                        if (localIdx !== -1) {
+                            mergedRecords[localIdx] = { ...conflict.cloud };
+                        }
+                    }
+                });
+
+                // Update local data
+                staffMembers = mergedStaff;
+                timeRecords = mergedRecords;
+                saveStaffMembers();
+                saveTimeRecords();
+
+                // Save merged data to cloud
+                const backupData = {
+                    version: '1.0',
+                    timestamp: new Date().toISOString(),
+                    savedBy: currentUser ? currentUser.fullName : 'Unknown',
+                    mergedBy: currentUser ? currentUser.fullName : 'Unknown',
+                    data: {
+                        staffMembers: mergedStaff,
+                        timeRecords: mergedRecords
+                    }
+                };
+
+                const jsonContent = JSON.stringify(backupData, null, 2);
+                const blob = new Blob([jsonContent], { type: 'application/json' });
+
+                let response;
+
+                if (cloudFileId) {
+                    response = await fetch(
+                        `https://www.googleapis.com/upload/drive/v3/files/${cloudFileId}?uploadType=media`,
+                        {
+                            method: 'PATCH',
+                            headers: {
+                                'Authorization': `Bearer ${googleAccessToken}`,
+                                'Content-Type': 'application/json'
+                            },
+                            body: blob
+                        }
+                    );
+                } else {
+                    const metadata = {
+                        name: GOOGLE_DRIVE_CONFIG.BACKUP_FILE_NAME,
+                        parents: [GOOGLE_DRIVE_CONFIG.FOLDER_ID],
+                        mimeType: 'application/json'
+                    };
+
+                    const formData = new FormData();
+                    formData.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+                    formData.append('file', blob);
+
+                    response = await fetch(
+                        'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name',
+                        {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${googleAccessToken}`
+                            },
+                            body: formData
+                        }
+                    );
+
+                    if (response.ok) {
+                        const result = await response.json();
+                        cloudFileId = result.id;
+                        localStorage.setItem('cestisCloudFileId', cloudFileId);
+                    }
+                }
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error?.message || 'Merge upload failed');
+                }
+
+                // Update sync tracking
+                lastSyncTime = new Date();
+                localStorage.setItem('cestisLastSyncTime', lastSyncTime.toISOString());
+                updateLastSyncDisplay();
+
+                lastSavedBy = currentUser ? currentUser.fullName : 'Unknown';
+                cloudFileTimestamp = new Date().toISOString();
+                updateLastSavedByDisplay();
+
+                setCloudSyncing(false);
+                closeSmartMergeModal();
+
+                // Update UI (only if elements exist - admin only features)
+                if (document.getElementById('staffTable')) {
+                    renderStaffTable();
+                }
+                renderTodayLog();
+                renderHistory();
+
+                // Show success
+                showMergeSuccessModal(mergeAnalysis);
+
+            } catch (error) {
+                console.error('Error executing merge:', error);
+                setCloudSyncing(false);
+
+                if (error.message.includes('invalid_token') || error.message.includes('Invalid Credentials')) {
+                    alert('Your session has expired. Please reconnect to Google Drive.');
+                    disconnectFromGoogleDrive();
+                } else {
+                    alert(`Failed to merge: ${error.message}`);
+                }
+            }
+
+            cloudDataForMerge = null;
+            mergeAnalysis = null;
+        }
+
+        // Staff: Perform automatic merge without modal
+        async function performStaffMerge() {
+            setCloudSyncing(true);
+
+            try {
+                // First try to find the file if we don't have the ID
+                if (!cloudFileId) {
+                    await findExistingBackupFile();
+                }
+
+                let cloudData = null;
+                let existingStaff = [];
+                let existingRecords = [];
+
+                if (cloudFileId) {
+                    const response = await fetch(
+                        `https://www.googleapis.com/drive/v3/files/${cloudFileId}?alt=media`,
+                        {
+                            headers: {
+                                'Authorization': `Bearer ${googleAccessToken}`
+                            }
+                        }
+                    );
+
+                    if (response.ok) {
+                        cloudData = await response.json();
+                        existingStaff = cloudData.data?.staffMembers || [];
+                        existingRecords = cloudData.data?.timeRecords || [];
+                    }
+                }
+
+                // Merge staff members (add new local ones to cloud)
+                const mergedStaff = [...existingStaff];
+                let addedStaff = 0;
+                staffMembers.forEach(localStaff => {
+                    const exists = mergedStaff.find(s => s.id === localStaff.id || s.username === localStaff.username);
+                    if (!exists) {
+                        mergedStaff.push({ ...localStaff });
+                        addedStaff++;
+                    } else {
+                        // Update existing staff with local changes
+                        const idx = mergedStaff.findIndex(s => s.id === localStaff.id || s.username === localStaff.username);
+                        mergedStaff[idx] = { ...localStaff };
+                    }
+                });
+
+                // Merge time records
+                const mergedRecords = [...existingRecords];
+                let addedRecords = 0;
+                timeRecords.forEach(localRecord => {
+                    const exists = mergedRecords.find(r => r.id === localRecord.id);
+                    if (!exists) {
+                        mergedRecords.push({ ...localRecord });
+                        addedRecords++;
+                    } else {
+                        // Update existing record
+                        const idx = mergedRecords.findIndex(r => r.id === localRecord.id);
+                        mergedRecords[idx] = { ...localRecord };
+                    }
+                });
+
+                // Also pull any cloud-only records to local
+                let pulledStaff = 0;
+                let pulledRecords = 0;
+                existingStaff.forEach(cloudStaff => {
+                    if (!staffMembers.find(s => s.id === cloudStaff.id || s.username === cloudStaff.username)) {
+                        staffMembers.push({ ...cloudStaff });
+                        pulledStaff++;
+                    }
+                });
+                existingRecords.forEach(cloudRecord => {
+                    if (!timeRecords.find(r => r.id === cloudRecord.id)) {
+                        timeRecords.push({ ...cloudRecord });
+                        pulledRecords++;
+                    }
+                });
+
+                if (pulledStaff > 0 || pulledRecords > 0) {
+                    saveStaffMembers();
+                    saveTimeRecords();
+                }
+
+                // Save merged data to cloud
+                const backupData = {
+                    version: '1.0',
+                    timestamp: new Date().toISOString(),
+                    savedBy: currentUser ? currentUser.fullName : 'Unknown',
+                    mergedBy: currentUser ? currentUser.fullName : 'Unknown',
+                    data: {
+                        staffMembers: mergedStaff,
+                        timeRecords: mergedRecords
+                    }
+                };
+
+                const jsonContent = JSON.stringify(backupData, null, 2);
+                const blob = new Blob([jsonContent], { type: 'application/json' });
+
+                let response;
+
+                if (cloudFileId) {
+                    response = await fetch(
+                        `https://www.googleapis.com/upload/drive/v3/files/${cloudFileId}?uploadType=media`,
+                        {
+                            method: 'PATCH',
+                            headers: {
+                                'Authorization': `Bearer ${googleAccessToken}`,
+                                'Content-Type': 'application/json'
+                            },
+                            body: blob
+                        }
+                    );
+                } else {
+                    const metadata = {
+                        name: GOOGLE_DRIVE_CONFIG.BACKUP_FILE_NAME,
+                        parents: [GOOGLE_DRIVE_CONFIG.FOLDER_ID],
+                        mimeType: 'application/json'
+                    };
+
+                    const formData = new FormData();
+                    formData.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+                    formData.append('file', blob);
+
+                    response = await fetch(
+                        'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name',
+                        {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${googleAccessToken}`
+                            },
+                            body: formData
+                        }
+                    );
+
+                    if (response.ok) {
+                        const result = await response.json();
+                        cloudFileId = result.id;
+                        localStorage.setItem('cestisCloudFileId', cloudFileId);
+                    }
+                }
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error?.message || 'Merge failed');
+                }
+
+                // Update sync tracking
+                lastSyncTime = new Date();
+                localStorage.setItem('cestisLastSyncTime', lastSyncTime.toISOString());
+                updateLastSyncDisplay();
+
+                lastSavedBy = currentUser ? currentUser.fullName : 'Unknown';
+                cloudFileTimestamp = new Date().toISOString();
+                updateLastSavedByDisplay();
+
+                setCloudSyncing(false);
+
+                // Update UI (only if elements exist - admin only features)
+                if (document.getElementById('staffTable')) {
+                    renderStaffTable();
+                }
+                renderTodayLog();
+                renderHistory();
+
+                // Show simple notification for staff (not the full modal)
+                showStaffMergeNotification(addedStaff + addedRecords, pulledStaff + pulledRecords);
+
+            } catch (error) {
+                console.error('Error in staff merge:', error);
+                setCloudSyncing(false);
+
+                if (error.message.includes('invalid_token') || error.message.includes('Invalid Credentials')) {
+                    alert('Your session has expired. Please reconnect to Google Drive.');
+                    disconnectFromGoogleDrive();
+                } else {
+                    alert(`Merge failed: ${error.message}`);
+                }
+            }
+        }
+
+        // Show simple notification for staff users
+        function showStaffMergeNotification(uploadedCount, downloadedCount) {
+            const modalHTML = `
+                <div id="staffMergeNotificationModal" class="modal" style="display: flex; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); z-index: 1000; justify-content: center; align-items: center;">
+                    <div style="background: var(--bg-secondary); padding: 2rem; border-radius: 24px; max-width: 400px; width: 90%; box-shadow: var(--shadow-xl); animation: slideUp 0.3s ease; text-align: center;">
+                        <div style="font-size: 4rem; margin-bottom: 1rem;">✅</div>
+                        <h2 style="background: linear-gradient(135deg, #9C27B0, #E91E63); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 1rem;">Data Merged!</h2>
+                        <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">
+                            Your data has been synchronized with the cloud.
+                        </p>
+                        <div style="background: var(--bg-tertiary); padding: 1rem; border-radius: 0.5rem; margin-bottom: 1.5rem; text-align: left;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                                <span>Uploaded to cloud:</span>
+                                <strong style="color: #4CAF50;">${uploadedCount} record(s)</strong>
+                            </div>
+                            <div style="display: flex; justify-content: space-between;">
+                                <span>Downloaded from cloud:</span>
+                                <strong style="color: #2196F3;">${downloadedCount} record(s)</strong>
+                            </div>
+                        </div>
+                        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.5rem;">
+                            Merged by: ${currentUser ? currentUser.fullName : 'Unknown'}<br>
+                            Time: ${new Date().toLocaleString()}
+                        </p>
+                        <button class="btn btn-primary" onclick="closeStaffMergeNotification()" style="width: 100%; padding: 0.75rem;">
+                            OK
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+        }
+
+        function closeStaffMergeNotification() {
+            const modal = document.getElementById('staffMergeNotificationModal');
+            if (modal) modal.remove();
+        }
+
+        // Show merge success modal for admin
+        function showMergeSuccessModal(analysis) {
+            const totalMerged = analysis.staffMembers.newLocal.length +
+                               analysis.staffMembers.newCloud.length +
+                               analysis.timeRecords.newLocal.length +
+                               analysis.timeRecords.newCloud.length +
+                               analysis.staffMembers.conflicts.length +
+                               analysis.timeRecords.conflicts.length;
+
+            const modalHTML = `
+                <div id="mergeSuccessModal" class="modal" style="display: flex; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); z-index: 1000; justify-content: center; align-items: center;">
+                    <div style="background: var(--bg-secondary); padding: 2rem; border-radius: 24px; max-width: 450px; width: 90%; box-shadow: var(--shadow-xl); animation: slideUp 0.3s ease;">
+                        <div style="background: linear-gradient(135deg, #9C27B0 0%, #E91E63 100%); margin: -2rem -2rem 1.5rem -2rem; padding: 1.5rem 2rem; border-radius: 24px 24px 0 0; text-align: center;">
+                            <div style="font-size: 3rem; margin-bottom: 0.5rem;">✅</div>
+                            <h2 style="color: white; margin: 0;">Merge Complete!</h2>
+                        </div>
+
+                        <div style="background: var(--bg-tertiary); padding: 1rem; border-radius: 0.5rem; margin-bottom: 1.5rem;">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; text-align: center;">
+                                <div>
+                                    <div style="font-size: 1.5rem; font-weight: bold; color: #4CAF50;">${analysis.staffMembers.newLocal.length + analysis.timeRecords.newLocal.length}</div>
+                                    <div style="font-size: 0.8rem; color: var(--text-secondary);">Local → Cloud</div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 1.5rem; font-weight: bold; color: #2196F3;">${analysis.staffMembers.newCloud.length + analysis.timeRecords.newCloud.length}</div>
+                                    <div style="font-size: 0.8rem; color: var(--text-secondary);">Cloud → Local</div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 1.5rem; font-weight: bold; color: #FF9800;">${analysis.staffMembers.conflicts.length + analysis.timeRecords.conflicts.length}</div>
+                                    <div style="font-size: 0.8rem; color: var(--text-secondary);">Conflicts Resolved</div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 1.5rem; font-weight: bold; color: #9C27B0;">${staffMembers.length + timeRecords.length}</div>
+                                    <div style="font-size: 0.8rem; color: var(--text-secondary);">Total Records</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <p style="font-size: 0.85rem; color: var(--text-muted); text-align: center; margin-bottom: 1.5rem;">
+                            Merged by: ${currentUser ? currentUser.fullName : 'Unknown'}<br>
+                            Time: ${new Date().toLocaleString()}
+                        </p>
+
+                        <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                            <button class="btn btn-success" onclick="browseBackupFiles(); closeMergeSuccessModal();" style="width: 100%;">
+                                📁 Browse All Backups
+                            </button>
+                            <button class="btn btn-secondary" onclick="closeMergeSuccessModal()" style="width: 100%;">
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+        }
+
+        function closeMergeSuccessModal() {
+            const modal = document.getElementById('mergeSuccessModal');
+            if (modal) modal.remove();
+        }
+
+        // Close smart merge modal
+        function closeSmartMergeModal() {
+            document.getElementById('smartMergeModal').style.display = 'none';
+            cloudDataForMerge = null;
+            mergeAnalysis = null;
         }
 
         // ============================================
