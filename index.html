@@ -2386,7 +2386,7 @@
             // Your Google Drive folder ID from the shared link
             FOLDER_ID: '11vWe_Nc40TtJ1Hi7PoE7EZ3JrpR-K0Vj',
             // File name for backup
-            BACKUP_FILE_NAME: 'Staff_Clock_In_System Data.json',
+            BACKUP_FILE_NAME: 'Staff_Clock_In_System.json',
             // API scopes needed - using 'drive' scope to allow access to shared files from any account
             SCOPES: 'https://www.googleapis.com/auth/drive'
         };
@@ -2558,7 +2558,7 @@
                                         <strong style="color: var(--info);">How to get your access token:</strong>
                                         <ol style="margin-top: var(--space-2); margin-left: var(--space-4); color: var(--text-secondary); font-size: 0.85rem; line-height: 1.6;">
                                             <li>Click the link below to open Google OAuth Playground</li>
-                                            <li>In Step 1, find and select <strong>"Drive API v3"</strong> → check <strong>"drive.file"</strong></li>
+                                            <li>In Step 1, find and select <strong>"Drive API v3"</strong> → check <strong>"../auth/drive"</strong> (full access to shared files)</li>
                                             <li>Click <strong>"Authorize APIs"</strong> (blue button)</li>
                                             <li>Sign in with your Google account</li>
                                             <li>In Step 2, click <strong>"Exchange authorization code for tokens"</strong></li>
@@ -2663,10 +2663,11 @@
                 closeGoogleAuthModal();
                 updateCloudUI(true);
 
-                alert(`✅ Connected to Google Drive as ${data.user.displayName || data.user.emailAddress}`);
-
                 // Try to find existing backup file
                 await findExistingBackupFile();
+
+                // Show forced sync modal after successful connection
+                showForcedSyncAfterConnectModal();
 
             } catch (error) {
                 console.error('Token verification failed:', error);
@@ -2688,7 +2689,8 @@
             // Try to find existing backup file
             await findExistingBackupFile();
 
-            alert('✅ Connected to Google Drive successfully! You can now save and sync your data.');
+            // Show forced sync modal after successful connection
+            showForcedSyncAfterConnectModal();
         }
 
         function handleGoogleAuthError(error) {
@@ -3096,6 +3098,456 @@
         }
 
         // ============================================
+        // LOGIN SYNC PROMPTS
+        // ============================================
+
+        // Prompt user to sync from cloud on login
+        function promptSyncOnLogin() {
+            // Check if we have a valid Google Drive token
+            const savedToken = localStorage.getItem('cestisGoogleAccessToken');
+            const savedExpiry = localStorage.getItem('cestisGoogleTokenExpiry');
+
+            // Show prompt modal after a brief delay to let dashboard load
+            setTimeout(() => {
+                if (!savedToken || !savedExpiry) {
+                    // Not connected to Google Drive - prompt to connect
+                    showConnectCloudOnLoginModal();
+                    return;
+                }
+
+                // Check if token is still valid
+                const expiry = new Date(savedExpiry);
+                if (expiry <= new Date()) {
+                    // Token expired - prompt to reconnect
+                    showConnectCloudOnLoginModal();
+                    return;
+                }
+
+                // Connected with valid token - show sync prompt
+                showSyncOnLoginModal();
+            }, 500);
+        }
+
+        // Show connect to cloud modal on login
+        function showConnectCloudOnLoginModal() {
+            const existingModal = document.getElementById('connectCloudOnLoginModal');
+            if (existingModal) {
+                existingModal.remove();
+            }
+
+            const modalHTML = `
+                <div id="connectCloudOnLoginModal" class="modal" style="display: flex;">
+                    <div class="modal-content" style="max-width: 450px;">
+                        <div class="modal-header">
+                            <h2>☁️ Connect to Cloud Storage?</h2>
+                            <button class="close-btn" onclick="closeConnectCloudOnLoginModal(false)">×</button>
+                        </div>
+                        <div style="padding: var(--space-5);">
+                            <div style="text-align: center; margin-bottom: var(--space-5);">
+                                <span style="font-size: 3rem;">☁️</span>
+                            </div>
+
+                            <p style="text-align: center; color: var(--text-secondary); margin-bottom: var(--space-5);">
+                                Connect to Google Drive to sync your time tracking data across devices and with other users.
+                            </p>
+
+                            <div style="background: var(--info-bg); border: 1px solid var(--info-border); border-radius: var(--radius-md); padding: var(--space-3); margin-bottom: var(--space-5);">
+                                <strong style="color: var(--info);">💡 Benefits:</strong>
+                                <ul style="color: var(--text-secondary); font-size: 0.9rem; margin: var(--space-2) 0 0 var(--space-4); padding: 0;">
+                                    <li>Backup your data securely</li>
+                                    <li>Sync across multiple devices</li>
+                                    <li>Share data with other users</li>
+                                </ul>
+                            </div>
+
+                            <div style="display: flex; gap: var(--space-3);">
+                                <button class="btn btn-secondary" onclick="closeConnectCloudOnLoginModal(false)" style="flex: 1;">
+                                    Skip
+                                </button>
+                                <button class="btn btn-primary" onclick="closeConnectCloudOnLoginModal(true)" style="flex: 1;">
+                                    ☁️ Connect Now
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+        }
+
+        // Close connect cloud on login modal
+        function closeConnectCloudOnLoginModal(shouldConnect) {
+            const modal = document.getElementById('connectCloudOnLoginModal');
+            if (modal) {
+                modal.remove();
+            }
+
+            if (shouldConnect) {
+                connectToGoogleDrive();
+            }
+        }
+
+        // Show sync on login modal
+        function showSyncOnLoginModal() {
+            const existingModal = document.getElementById('syncOnLoginModal');
+            if (existingModal) {
+                existingModal.remove();
+            }
+
+            const modalHTML = `
+                <div id="syncOnLoginModal" class="modal" style="display: flex;">
+                    <div class="modal-content" style="max-width: 450px;">
+                        <div class="modal-header">
+                            <h2>☁️ Sync from Cloud?</h2>
+                            <button class="close-btn" onclick="closeSyncOnLoginModal(false)">×</button>
+                        </div>
+                        <div style="padding: var(--space-5);">
+                            <div style="text-align: center; margin-bottom: var(--space-5);">
+                                <span style="font-size: 3rem;">🔄</span>
+                            </div>
+
+                            <p style="text-align: center; color: var(--text-secondary); margin-bottom: var(--space-5);">
+                                Your Google Drive is connected. Would you like to sync the latest data from the cloud?
+                            </p>
+
+                            <div style="background: var(--info-bg); border: 1px solid var(--info-border); border-radius: var(--radius-md); padding: var(--space-3); margin-bottom: var(--space-5);">
+                                <strong style="color: var(--info);">💡 Tip:</strong>
+                                <span style="color: var(--text-secondary); font-size: 0.9rem;">
+                                    Syncing ensures you have the latest data saved by other users.
+                                </span>
+                            </div>
+
+                            <div style="display: flex; gap: var(--space-3);">
+                                <button class="btn btn-secondary" onclick="closeSyncOnLoginModal(false)" style="flex: 1;">
+                                    Skip
+                                </button>
+                                <button class="btn btn-primary" onclick="closeSyncOnLoginModal(true)" style="flex: 1;">
+                                    🔄 Sync Now
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+        }
+
+        // Close sync on login modal
+        async function closeSyncOnLoginModal(shouldSync) {
+            const modal = document.getElementById('syncOnLoginModal');
+            if (modal) {
+                modal.remove();
+            }
+
+            if (shouldSync) {
+                await performAutoSyncOnLogin();
+            }
+        }
+
+        // Perform automatic sync on login
+        async function performAutoSyncOnLogin() {
+            // Initialize token if not already done
+            const savedToken = localStorage.getItem('cestisGoogleAccessToken');
+            if (savedToken) {
+                googleAccessToken = savedToken;
+                isCloudConnected = true;
+            }
+
+            if (!isCloudConnected || !googleAccessToken) {
+                showToast('Could not connect to Google Drive', 'error');
+                return;
+            }
+
+            setCloudSyncing(true);
+            updateCloudUI(true);
+
+            try {
+                // First try to find the backup file
+                if (!cloudFileId) {
+                    const savedFileId = localStorage.getItem('cestisCloudFileId');
+                    if (savedFileId) {
+                        cloudFileId = savedFileId;
+                    } else {
+                        await findExistingBackupFile();
+                    }
+                }
+
+                if (!cloudFileId) {
+                    setCloudSyncing(false);
+                    showToast('No backup file found in cloud', 'warning');
+                    return;
+                }
+
+                // Download the file
+                const response = await fetch(
+                    `https://www.googleapis.com/drive/v3/files/${cloudFileId}?alt=media`,
+                    {
+                        headers: {
+                            'Authorization': `Bearer ${googleAccessToken}`
+                        }
+                    }
+                );
+
+                if (!response.ok) {
+                    throw new Error('Failed to download backup');
+                }
+
+                const backupData = await response.json();
+
+                // Validate backup format
+                if (!backupData.data || !backupData.version) {
+                    throw new Error('Invalid backup file format');
+                }
+
+                // Restore all data
+                if (backupData.data.staffMembers) {
+                    staffMembers = backupData.data.staffMembers;
+                    saveStaffMembers();
+                }
+
+                if (backupData.data.timeRecords) {
+                    timeRecords = backupData.data.timeRecords;
+                    saveTimeRecords();
+                }
+
+                // Update sync tracking
+                lastSyncTime = new Date();
+                localStorage.setItem('cestisLastSyncTime', lastSyncTime.toISOString());
+                updateLastSyncDisplay();
+
+                // Update last saved by info
+                lastSavedBy = backupData.savedBy || 'Unknown';
+                cloudFileTimestamp = backupData.timestamp;
+                updateLastSavedByDisplay();
+
+                // Refresh UI
+                renderTodayLog();
+                renderHistory();
+                if (currentUser && currentUser.role === 'Admin') {
+                    renderStaffTable();
+                }
+
+                setCloudSyncing(false);
+
+                const savedByInfo = backupData.savedBy ? ` (saved by ${backupData.savedBy})` : '';
+                showToast(`Synced from cloud${savedByInfo}`, 'success');
+
+            } catch (error) {
+                console.error('Error syncing on login:', error);
+                setCloudSyncing(false);
+
+                if (error.message.includes('invalid_token') || error.message.includes('Invalid Credentials')) {
+                    showToast('Google Drive session expired', 'error');
+                    // Clear invalid token
+                    localStorage.removeItem('cestisGoogleAccessToken');
+                    localStorage.removeItem('cestisGoogleTokenExpiry');
+                    updateCloudUI(false);
+                } else {
+                    showToast(`Sync failed: ${error.message}`, 'error');
+                }
+            }
+        }
+
+        // ============================================
+        // FORCED SYNC AFTER CONNECTION
+        // ============================================
+
+        // Show forced sync modal after successful Google Drive connection
+        function showForcedSyncAfterConnectModal() {
+            const existingModal = document.getElementById('forcedSyncModal');
+            if (existingModal) {
+                existingModal.remove();
+            }
+
+            // Check if there's an existing backup to sync from
+            const hasBackup = cloudFileId !== null;
+
+            const modalHTML = `
+                <div id="forcedSyncModal" class="modal" style="display: flex;">
+                    <div class="modal-content" style="max-width: 450px;">
+                        <div class="modal-header" style="background: linear-gradient(135deg, #22c55e, #16a34a); color: white;">
+                            <h2 style="color: white;">✅ Connected to Google Drive!</h2>
+                        </div>
+                        <div style="padding: var(--space-5);">
+                            <div style="text-align: center; margin-bottom: var(--space-5);">
+                                <span style="font-size: 3rem;">🔄</span>
+                            </div>
+
+                            ${hasBackup ? `
+                                <p style="text-align: center; color: var(--text-secondary); margin-bottom: var(--space-5);">
+                                    A cloud backup was found. You must sync your data before continuing to ensure you have the latest information.
+                                </p>
+
+                                <div style="background: var(--warning-bg); border: 1px solid var(--warning); border-radius: var(--radius-md); padding: var(--space-3); margin-bottom: var(--space-5);">
+                                    <strong style="color: var(--warning);">⚠️ Important:</strong>
+                                    <span style="color: var(--text-secondary); font-size: 0.9rem;">
+                                        This will replace your local data with the cloud backup.
+                                    </span>
+                                </div>
+
+                                <button class="btn btn-primary" onclick="performForcedSyncAfterConnect()" style="width: 100%;">
+                                    🔄 Sync Now
+                                </button>
+                            ` : `
+                                <p style="text-align: center; color: var(--text-secondary); margin-bottom: var(--space-5);">
+                                    No existing backup was found in the cloud. Would you like to save your current data to the cloud now?
+                                </p>
+
+                                <div style="background: var(--info-bg); border: 1px solid var(--info-border); border-radius: var(--radius-md); padding: var(--space-3); margin-bottom: var(--space-5);">
+                                    <strong style="color: var(--info);">💡 Tip:</strong>
+                                    <span style="color: var(--text-secondary); font-size: 0.9rem;">
+                                        Saving now will create a backup that other users can sync from.
+                                    </span>
+                                </div>
+
+                                <div style="display: flex; gap: var(--space-3);">
+                                    <button class="btn btn-secondary" onclick="closeForcedSyncModal(false)" style="flex: 1;">
+                                        Skip for Now
+                                    </button>
+                                    <button class="btn btn-primary" onclick="performForcedSaveAfterConnect()" style="flex: 1;">
+                                        💾 Save to Cloud
+                                    </button>
+                                </div>
+                            `}
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+        }
+
+        // Perform forced sync after connection
+        async function performForcedSyncAfterConnect() {
+            const modal = document.getElementById('forcedSyncModal');
+
+            // Update modal to show syncing status
+            if (modal) {
+                const content = modal.querySelector('.modal-content > div:last-child');
+                content.innerHTML = `
+                    <div style="text-align: center; padding: var(--space-5);">
+                        <div class="spinning" style="font-size: 3rem; margin-bottom: var(--space-4);">🔄</div>
+                        <p style="color: var(--text-secondary);">Syncing data from cloud...</p>
+                    </div>
+                `;
+            }
+
+            setCloudSyncing(true);
+
+            try {
+                // Download the file
+                const response = await fetch(
+                    `https://www.googleapis.com/drive/v3/files/${cloudFileId}?alt=media`,
+                    {
+                        headers: {
+                            'Authorization': `Bearer ${googleAccessToken}`
+                        }
+                    }
+                );
+
+                if (!response.ok) {
+                    throw new Error('Failed to download backup');
+                }
+
+                const backupData = await response.json();
+
+                // Validate backup format
+                if (!backupData.data || !backupData.version) {
+                    throw new Error('Invalid backup file format');
+                }
+
+                // Restore data
+                if (backupData.data.staffMembers) {
+                    staffMembers = backupData.data.staffMembers;
+                    saveStaffMembers();
+                }
+
+                if (backupData.data.timeRecords) {
+                    timeRecords = backupData.data.timeRecords;
+                    saveTimeRecords();
+                }
+
+                // Update sync tracking
+                lastSyncTime = new Date();
+                localStorage.setItem('cestisLastSyncTime', lastSyncTime.toISOString());
+                updateLastSyncDisplay();
+
+                // Update last saved by info
+                lastSavedBy = backupData.savedBy || 'Unknown';
+                cloudFileTimestamp = backupData.timestamp;
+                updateLastSavedByDisplay();
+
+                // Refresh UI
+                renderTodayLog();
+                renderHistory();
+                if (currentUser && currentUser.role === 'Admin') {
+                    renderStaffTable();
+                }
+
+                setCloudSyncing(false);
+                closeForcedSyncModal(true);
+
+                const savedByInfo = backupData.savedBy ? ` (saved by ${backupData.savedBy})` : '';
+                showToast(`Connected and synced from cloud${savedByInfo}`, 'success');
+
+            } catch (error) {
+                console.error('Error during forced sync:', error);
+                setCloudSyncing(false);
+
+                // Update modal to show error with retry option
+                if (modal) {
+                    const content = modal.querySelector('.modal-content > div:last-child');
+                    content.innerHTML = `
+                        <div style="text-align: center; margin-bottom: var(--space-5);">
+                            <span style="font-size: 3rem;">❌</span>
+                        </div>
+                        <p style="text-align: center; color: var(--danger); margin-bottom: var(--space-5);">
+                            Sync failed: ${error.message}
+                        </p>
+                        <div style="display: flex; gap: var(--space-3);">
+                            <button class="btn btn-secondary" onclick="closeForcedSyncModal(false)" style="flex: 1;">
+                                Continue Anyway
+                            </button>
+                            <button class="btn btn-primary" onclick="performForcedSyncAfterConnect()" style="flex: 1;">
+                                🔄 Retry
+                            </button>
+                        </div>
+                    `;
+                }
+            }
+        }
+
+        // Perform save to cloud after connection (when no backup exists)
+        async function performForcedSaveAfterConnect() {
+            const modal = document.getElementById('forcedSyncModal');
+
+            // Update modal to show saving status
+            if (modal) {
+                const content = modal.querySelector('.modal-content > div:last-child');
+                content.innerHTML = `
+                    <div style="text-align: center; padding: var(--space-5);">
+                        <div class="spinning" style="font-size: 3rem; margin-bottom: var(--space-4);">💾</div>
+                        <p style="color: var(--text-secondary);">Saving data to cloud...</p>
+                    </div>
+                `;
+            }
+
+            // Close modal and trigger save
+            closeForcedSyncModal(false);
+            await saveToCloud();
+        }
+
+        // Close forced sync modal
+        function closeForcedSyncModal(syncSuccessful) {
+            const modal = document.getElementById('forcedSyncModal');
+            if (modal) {
+                modal.remove();
+            }
+        }
+
+        // ============================================
         // FILE BROWSER & SELECTIVE SYNC FUNCTIONALITY
         // ============================================
 
@@ -3309,8 +3761,9 @@
         }
 
         // Show sync confirmation modal
+        // Show selective sync modal with checkboxes
         function showSyncConfirmModal(backupData, fileId, fileName) {
-            const existingModal = document.getElementById('syncConfirmModal');
+            const existingModal = document.getElementById('selectiveSyncModal');
             if (existingModal) {
                 existingModal.remove();
             }
@@ -3323,55 +3776,96 @@
             const recordsCount = backupData.data.timeRecords ? backupData.data.timeRecords.length : 0;
 
             const modalHTML = `
-                <div id="syncConfirmModal" class="modal" style="display: flex;">
-                    <div class="modal-content" style="max-width: 500px;">
+                <div id="selectiveSyncModal" class="modal" style="display: flex;">
+                    <div class="modal-content" style="max-width: 550px;">
                         <div class="modal-header">
-                            <h2>🔄 Sync from Backup</h2>
-                            <button class="close-btn" onclick="closeSyncConfirmModal()">×</button>
+                            <h2>🔄 Selective Sync</h2>
+                            <button class="close-btn" onclick="closeSelectiveSyncModal()">×</button>
                         </div>
                         <div style="padding: var(--space-5);">
-                            <div style="background: var(--bg-tertiary); border-radius: var(--radius-md); padding: var(--space-4); margin-bottom: var(--space-4);">
+                            <div style="background: var(--bg-tertiary); border-radius: var(--radius-md); padding: var(--space-4); margin-bottom: var(--space-5);">
                                 <div style="font-weight: 600; color: var(--text-primary); margin-bottom: var(--space-2);">
                                     📄 ${fileName}
                                 </div>
                                 <div style="font-size: 0.9rem; color: var(--text-secondary);">
-                                    <div>📅 ${backupTime}</div>
-                                    <div style="margin-top: 4px;">👤 Saved by: ${savedBy}</div>
+                                    <span>📅 ${backupTime}</span>
+                                    <span style="margin-left: 16px;">👤 Saved by: ${savedBy}</span>
                                 </div>
                             </div>
 
-                            <div style="margin-bottom: var(--space-4);">
-                                <div style="font-weight: 600; margin-bottom: var(--space-2);">Backup contains:</div>
-                                <div style="display: flex; flex-direction: column; gap: var(--space-2);">
-                                    <div style="display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2); background: var(--bg-secondary); border-radius: var(--radius-sm);">
-                                        <span>👥</span>
-                                        <span>Staff Members: <strong>${staffCount}</strong></span>
-                                    </div>
-                                    <div style="display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2); background: var(--bg-secondary); border-radius: var(--radius-sm);">
-                                        <span>⏰</span>
-                                        <span>Time Records: <strong>${recordsCount}</strong></span>
-                                    </div>
-                                </div>
+                            <p style="margin-bottom: var(--space-4); color: var(--text-secondary);">
+                                Choose which data you want to sync from this backup:
+                            </p>
+
+                            <div style="display: flex; flex-direction: column; gap: var(--space-3);">
+                                <label class="sync-option-item" style="${staffCount === 0 ? 'opacity: 0.5;' : ''}">
+                                    <input type="checkbox" id="syncStaffMembers" ${staffCount > 0 ? 'checked' : 'disabled'}>
+                                    <span class="sync-option-label">
+                                        <span style="font-size: 1.2rem;">👥</span>
+                                        <span>
+                                            <strong>Staff Members</strong>
+                                            <span style="color: var(--text-muted); font-size: 0.85rem; margin-left: 8px;">(${staffCount} member${staffCount !== 1 ? 's' : ''})</span>
+                                        </span>
+                                    </span>
+                                </label>
+
+                                <label class="sync-option-item" style="${recordsCount === 0 ? 'opacity: 0.5;' : ''}">
+                                    <input type="checkbox" id="syncTimeRecords" ${recordsCount > 0 ? 'checked' : 'disabled'}>
+                                    <span class="sync-option-label">
+                                        <span style="font-size: 1.2rem;">⏰</span>
+                                        <span>
+                                            <strong>Time Records</strong>
+                                            <span style="color: var(--text-muted); font-size: 0.85rem; margin-left: 8px;">(${recordsCount} record${recordsCount !== 1 ? 's' : ''})</span>
+                                        </span>
+                                    </span>
+                                </label>
                             </div>
 
-                            <div style="background: var(--warning-bg); border: 1px solid var(--warning); border-radius: var(--radius-md); padding: var(--space-3); margin-bottom: var(--space-4);">
+                            <div style="background: var(--warning-bg); border: 1px solid var(--warning-border); border-radius: var(--radius-md); padding: var(--space-3); margin-top: var(--space-5); margin-bottom: var(--space-4);">
                                 <strong style="color: var(--warning);">⚠️ Warning:</strong>
                                 <span style="color: var(--text-secondary); font-size: 0.9rem;">
-                                    This will <strong>replace</strong> your current local data with this backup.
+                                    Selected data will <strong>replace</strong> your current local data.
                                 </span>
                             </div>
 
                             <div style="display: flex; gap: var(--space-3);">
-                                <button class="btn btn-secondary" onclick="closeSyncConfirmModal()" style="flex: 1;">
+                                <button class="btn btn-secondary" onclick="closeSelectiveSyncModal()" style="flex: 1;">
                                     Cancel
                                 </button>
-                                <button class="btn btn-success" onclick="performSyncFromFile('${fileId}')" style="flex: 1;">
-                                    🔄 Sync Now
+                                <button class="btn btn-success" onclick="performSelectiveSync('${fileId}')" style="flex: 1;">
+                                    🔄 Sync Selected Data
                                 </button>
                             </div>
                         </div>
                     </div>
                 </div>
+                <style>
+                    .sync-option-item {
+                        display: flex;
+                        align-items: center;
+                        gap: var(--space-3);
+                        padding: var(--space-3);
+                        background: var(--bg-secondary);
+                        border: 1px solid var(--border-light);
+                        border-radius: var(--radius-md);
+                        cursor: pointer;
+                        transition: all 0.2s;
+                    }
+                    .sync-option-item:hover {
+                        border-color: var(--accent);
+                        background: var(--bg-hover);
+                    }
+                    .sync-option-item input[type="checkbox"] {
+                        width: 20px;
+                        height: 20px;
+                        accent-color: var(--accent);
+                    }
+                    .sync-option-label {
+                        display: flex;
+                        align-items: center;
+                        gap: var(--space-2);
+                    }
+                </style>
             `;
 
             // Store backup data for later use
@@ -3380,35 +3874,52 @@
             document.body.insertAdjacentHTML('beforeend', modalHTML);
         }
 
-        // Close sync confirmation modal
-        function closeSyncConfirmModal() {
-            const modal = document.getElementById('syncConfirmModal');
+        // Close selective sync modal
+        function closeSelectiveSyncModal() {
+            const modal = document.getElementById('selectiveSyncModal');
             if (modal) {
                 modal.remove();
             }
             window.pendingBackupData = null;
         }
 
-        // Perform sync from selected file
-        async function performSyncFromFile(fileId) {
+        // Perform selective sync based on user selections
+        async function performSelectiveSync(fileId) {
             const backupData = window.pendingBackupData;
             if (!backupData) {
                 alert('❌ Backup data not found. Please try again.');
-                closeSyncConfirmModal();
+                closeSelectiveSyncModal();
                 return;
             }
 
-            closeSyncConfirmModal();
+            const syncStaffMembers = document.getElementById('syncStaffMembers').checked;
+            const syncTimeRecords = document.getElementById('syncTimeRecords').checked;
+
+            if (!syncStaffMembers && !syncTimeRecords) {
+                alert('Please select at least one data type to sync.');
+                return;
+            }
+
+            // Build confirmation message
+            let selectedItems = [];
+            if (syncStaffMembers) selectedItems.push('Staff Members');
+            if (syncTimeRecords) selectedItems.push('Time Records');
+
+            if (!confirm(`⚠️ You are about to sync the following data:\n\n• ${selectedItems.join('\n• ')}\n\nThis will replace your current local data. Continue?`)) {
+                return;
+            }
+
+            closeSelectiveSyncModal();
             setCloudSyncing(true);
 
             try {
-                // Restore data
-                if (backupData.data.staffMembers) {
+                // Perform selective restore
+                if (syncStaffMembers && backupData.data.staffMembers) {
                     staffMembers = backupData.data.staffMembers;
                     saveStaffMembers();
                 }
 
-                if (backupData.data.timeRecords) {
+                if (syncTimeRecords && backupData.data.timeRecords) {
                     timeRecords = backupData.data.timeRecords;
                     saveTimeRecords();
                 }
@@ -3423,7 +3934,7 @@
                 cloudFileTimestamp = backupData.timestamp;
                 updateLastSavedByDisplay();
 
-                // Cache the file ID as our primary sync file
+                // Cache the file ID if this becomes our primary sync file
                 cloudFileId = fileId;
                 localStorage.setItem('cestisCloudFileId', cloudFileId);
 
@@ -3436,9 +3947,8 @@
 
                 setCloudSyncing(false);
 
-                const staffCount = backupData.data.staffMembers ? backupData.data.staffMembers.length : 0;
-                const recordsCount = backupData.data.timeRecords ? backupData.data.timeRecords.length : 0;
-                alert(`✅ Sync completed successfully!\n\nSynced:\n• ${staffCount} staff members\n• ${recordsCount} time records\n\nFrom backup saved by: ${lastSavedBy}`);
+                const syncedItems = selectedItems.join(', ');
+                alert(`✅ Selective sync completed!\n\nSynced: ${syncedItems}\n\nFrom backup saved by: ${lastSavedBy}`);
 
             } catch (error) {
                 console.error('Error performing sync:', error);
@@ -3536,6 +4046,9 @@
             renderHistory();
 
             setTimeout(() => showToast(`Welcome back, ${staff.fullName}!`, 'success'), 300);
+
+            // Prompt user to sync from cloud on login
+            promptSyncOnLogin();
         }
 
         // Show password change modal for first login
