@@ -3336,8 +3336,16 @@
             document.getElementById('smartMergeContent').style.display = 'block';
             document.getElementById('executeMergeBtn').disabled = false;
 
-            const cloudTime = cloudData?.timestamp ? new Date(cloudData.timestamp).toLocaleString() : 'No backup found';
-            const savedBy = cloudData?.savedBy || 'N/A';
+            const cloudTime = cloudData && cloudData.timestamp ? new Date(cloudData.timestamp).toLocaleString() : 'No backup found';
+            const savedBy = (cloudData && cloudData.savedBy) ? cloudData.savedBy : 'N/A';
+
+            // Calculate cloud counts with null safety
+            let cloudStaffCount = 0;
+            let cloudRecordsCount = 0;
+            if (cloudData && cloudData.data) {
+                cloudStaffCount = Array.isArray(cloudData.data.staffMembers) ? cloudData.data.staffMembers.length : 0;
+                cloudRecordsCount = Array.isArray(cloudData.data.timeRecords) ? cloudData.data.timeRecords.length : 0;
+            }
 
             const totalNewLocal = analysis.staffMembers.newLocal.length + analysis.timeRecords.newLocal.length;
             const totalNewCloud = analysis.staffMembers.newCloud.length + analysis.timeRecords.newCloud.length;
@@ -3366,7 +3374,7 @@
                 <div style="margin-top: 1rem; padding: 0.75rem; background: var(--bg-card); border-radius: 0.5rem;">
                     <strong>Local has:</strong> ${staffMembers.length} staff, ${timeRecords.length} time records
                     <br>
-                    <strong>Cloud has:</strong> ${cloudData?.data?.staffMembers?.length || 0} staff, ${cloudData?.data?.timeRecords?.length || 0} time records
+                    <strong>Cloud has:</strong> ${cloudStaffCount} staff, ${cloudRecordsCount} time records
                 </div>`;
 
             document.getElementById('mergeSummary').innerHTML = summaryHtml;
@@ -3468,7 +3476,7 @@
 
         // Execute the smart merge (Admin)
         async function executeSmartMerge() {
-            if (!mergeAnalysis) {
+            if (!mergeAnalysis || !mergeAnalysis.staffMembers || !mergeAnalysis.timeRecords) {
                 alert('No merge analysis available. Please try again.');
                 return;
             }
@@ -3490,48 +3498,52 @@
                 // Build merged staff list
                 const mergedStaff = [...staffMembers];
 
-                // Add new staff from cloud
-                if (addNewOnly) {
+                // Add new staff from cloud (with null safety)
+                if (addNewOnly && Array.isArray(mergeAnalysis.staffMembers.newCloud)) {
                     mergeAnalysis.staffMembers.newCloud.forEach(cloudStaff => {
-                        if (!mergedStaff.find(s => s.id === cloudStaff.id || s.username === cloudStaff.username)) {
+                        if (cloudStaff && !mergedStaff.find(s => s.id === cloudStaff.id || s.username === cloudStaff.username)) {
                             mergedStaff.push({ ...cloudStaff });
                         }
                     });
                 }
 
                 // Handle conflicts - use local by default (checkbox is checked)
-                mergeAnalysis.staffMembers.conflicts.forEach((conflict, idx) => {
-                    if (!useLocalStaff.has(idx)) {
-                        // Use cloud version
-                        const localIdx = mergedStaff.findIndex(s => s.id === conflict.local.id);
-                        if (localIdx !== -1) {
-                            mergedStaff[localIdx] = { ...conflict.cloud };
+                if (Array.isArray(mergeAnalysis.staffMembers.conflicts)) {
+                    mergeAnalysis.staffMembers.conflicts.forEach((conflict, idx) => {
+                        if (conflict && conflict.local && conflict.cloud && !useLocalStaff.has(idx)) {
+                            // Use cloud version
+                            const localIdx = mergedStaff.findIndex(s => s.id === conflict.local.id);
+                            if (localIdx !== -1) {
+                                mergedStaff[localIdx] = { ...conflict.cloud };
+                            }
                         }
-                    }
-                });
+                    });
+                }
 
                 // Build merged time records list
                 const mergedRecords = [...timeRecords];
 
-                // Add new records from cloud
-                if (addNewOnly) {
+                // Add new records from cloud (with null safety)
+                if (addNewOnly && Array.isArray(mergeAnalysis.timeRecords.newCloud)) {
                     mergeAnalysis.timeRecords.newCloud.forEach(cloudRecord => {
-                        if (!mergedRecords.find(r => r.id === cloudRecord.id)) {
+                        if (cloudRecord && !mergedRecords.find(r => r.id === cloudRecord.id)) {
                             mergedRecords.push({ ...cloudRecord });
                         }
                     });
                 }
 
                 // Handle record conflicts
-                mergeAnalysis.timeRecords.conflicts.forEach((conflict, idx) => {
-                    if (!useLocalRecords.has(idx)) {
-                        // Use cloud version
-                        const localIdx = mergedRecords.findIndex(r => r.id === conflict.local.id);
-                        if (localIdx !== -1) {
-                            mergedRecords[localIdx] = { ...conflict.cloud };
+                if (Array.isArray(mergeAnalysis.timeRecords.conflicts)) {
+                    mergeAnalysis.timeRecords.conflicts.forEach((conflict, idx) => {
+                        if (conflict && conflict.local && conflict.cloud && !useLocalRecords.has(idx)) {
+                            // Use cloud version
+                            const localIdx = mergedRecords.findIndex(r => r.id === conflict.local.id);
+                            if (localIdx !== -1) {
+                                mergedRecords[localIdx] = { ...conflict.cloud };
+                            }
                         }
-                    }
-                });
+                    });
+                }
 
                 // Update local data
                 staffMembers = mergedStaff;
@@ -3863,12 +3875,17 @@
 
         // Show merge success modal for admin
         function showMergeSuccessModal(analysis) {
-            const totalMerged = analysis.staffMembers.newLocal.length +
-                               analysis.staffMembers.newCloud.length +
-                               analysis.timeRecords.newLocal.length +
-                               analysis.timeRecords.newCloud.length +
-                               analysis.staffMembers.conflicts.length +
-                               analysis.timeRecords.conflicts.length;
+            // Safe access to analysis properties with defaults
+            const staffNewLocal = (analysis && analysis.staffMembers && Array.isArray(analysis.staffMembers.newLocal)) ? analysis.staffMembers.newLocal.length : 0;
+            const staffNewCloud = (analysis && analysis.staffMembers && Array.isArray(analysis.staffMembers.newCloud)) ? analysis.staffMembers.newCloud.length : 0;
+            const staffConflicts = (analysis && analysis.staffMembers && Array.isArray(analysis.staffMembers.conflicts)) ? analysis.staffMembers.conflicts.length : 0;
+            const recordsNewLocal = (analysis && analysis.timeRecords && Array.isArray(analysis.timeRecords.newLocal)) ? analysis.timeRecords.newLocal.length : 0;
+            const recordsNewCloud = (analysis && analysis.timeRecords && Array.isArray(analysis.timeRecords.newCloud)) ? analysis.timeRecords.newCloud.length : 0;
+            const recordsConflicts = (analysis && analysis.timeRecords && Array.isArray(analysis.timeRecords.conflicts)) ? analysis.timeRecords.conflicts.length : 0;
+
+            const localToCloud = staffNewLocal + recordsNewLocal;
+            const cloudToLocal = staffNewCloud + recordsNewCloud;
+            const conflictsResolved = staffConflicts + recordsConflicts;
 
             const modalHTML = `
                 <div id="mergeSuccessModal" class="modal" style="display: flex; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); z-index: 1000; justify-content: center; align-items: center;">
@@ -3881,15 +3898,15 @@
                         <div style="background: var(--bg-tertiary); padding: 1rem; border-radius: 0.5rem; margin-bottom: 1.5rem;">
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; text-align: center;">
                                 <div>
-                                    <div style="font-size: 1.5rem; font-weight: bold; color: #4CAF50;">${analysis.staffMembers.newLocal.length + analysis.timeRecords.newLocal.length}</div>
+                                    <div style="font-size: 1.5rem; font-weight: bold; color: #4CAF50;">${localToCloud}</div>
                                     <div style="font-size: 0.8rem; color: var(--text-secondary);">Local → Cloud</div>
                                 </div>
                                 <div>
-                                    <div style="font-size: 1.5rem; font-weight: bold; color: #2196F3;">${analysis.staffMembers.newCloud.length + analysis.timeRecords.newCloud.length}</div>
+                                    <div style="font-size: 1.5rem; font-weight: bold; color: #2196F3;">${cloudToLocal}</div>
                                     <div style="font-size: 0.8rem; color: var(--text-secondary);">Cloud → Local</div>
                                 </div>
                                 <div>
-                                    <div style="font-size: 1.5rem; font-weight: bold; color: #FF9800;">${analysis.staffMembers.conflicts.length + analysis.timeRecords.conflicts.length}</div>
+                                    <div style="font-size: 1.5rem; font-weight: bold; color: #FF9800;">${conflictsResolved}</div>
                                     <div style="font-size: 0.8rem; color: var(--text-secondary);">Conflicts Resolved</div>
                                 </div>
                                 <div>
