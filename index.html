@@ -3218,12 +3218,25 @@
                     );
 
                     if (response.ok) {
-                        cloudData = await response.json();
+                        try {
+                            cloudData = await response.json();
+                            console.log('Cloud data loaded:', cloudData);
+                        } catch (parseError) {
+                            console.error('Failed to parse cloud data:', parseError);
+                            cloudData = null;
+                        }
                     }
+                }
+
+                // Ensure cloudData has the expected structure
+                if (cloudData && !cloudData.data) {
+                    console.warn('Cloud data missing "data" property, initializing empty structure');
+                    cloudData = { data: { staffMembers: [], timeRecords: [] }, version: '1.0' };
                 }
 
                 cloudDataForMerge = cloudData;
                 mergeAnalysis = analyzeDataForMerge(cloudData);
+                console.log('Merge analysis:', mergeAnalysis);
                 displayMergeAnalysis(mergeAnalysis, cloudData);
 
             } catch (error) {
@@ -3474,6 +3487,51 @@
             }
         }
 
+        // Show merge progress overlay
+        function showMergeProgress(message, percentage) {
+            // Remove existing progress overlay if any
+            hideMergeProgress();
+
+            const progressHTML = `
+                <div id="mergeProgressOverlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(4px); z-index: 2000; display: flex; justify-content: center; align-items: center;">
+                    <div style="background: var(--bg-secondary); padding: 2rem; border-radius: 24px; max-width: 400px; width: 90%; box-shadow: var(--shadow-xl); text-align: center;">
+                        <div style="font-size: 3rem; margin-bottom: 1rem; animation: pulse 1.5s ease-in-out infinite;">🔄</div>
+                        <h3 style="color: var(--text-primary); margin-bottom: 1rem;">Merging Data</h3>
+                        <p id="mergeProgressMessage" style="color: var(--text-secondary); margin-bottom: 1.5rem;">${message}</p>
+                        <div style="background: var(--bg-tertiary); border-radius: 10px; height: 20px; overflow: hidden; margin-bottom: 0.5rem;">
+                            <div id="mergeProgressBar" style="background: linear-gradient(135deg, #9C27B0 0%, #E91E63 100%); height: 100%; width: ${percentage}%; transition: width 0.3s ease; border-radius: 10px;"></div>
+                        </div>
+                        <p id="mergeProgressPercent" style="color: var(--text-muted); font-size: 0.9rem;">${percentage}%</p>
+                    </div>
+                </div>
+                <style>
+                    @keyframes pulse {
+                        0%, 100% { transform: scale(1); }
+                        50% { transform: scale(1.1); }
+                    }
+                </style>
+            `;
+
+            document.body.insertAdjacentHTML('beforeend', progressHTML);
+        }
+
+        // Update merge progress
+        function updateMergeProgress(message, percentage) {
+            const msgEl = document.getElementById('mergeProgressMessage');
+            const barEl = document.getElementById('mergeProgressBar');
+            const pctEl = document.getElementById('mergeProgressPercent');
+
+            if (msgEl) msgEl.textContent = message;
+            if (barEl) barEl.style.width = percentage + '%';
+            if (pctEl) pctEl.textContent = percentage + '%';
+        }
+
+        // Hide merge progress overlay
+        function hideMergeProgress() {
+            const overlay = document.getElementById('mergeProgressOverlay');
+            if (overlay) overlay.remove();
+        }
+
         // Execute the smart merge (Admin)
         async function executeSmartMerge() {
             if (!mergeAnalysis || !mergeAnalysis.staffMembers || !mergeAnalysis.timeRecords) {
@@ -3484,9 +3542,16 @@
             const skipDuplicates = document.getElementById('mergeSkipDuplicates').checked;
             const addNewOnly = document.getElementById('mergeAddNewOnly').checked;
 
+            // Show merge progress overlay
+            showMergeProgress('Preparing merge...', 0);
+
             setCloudSyncing(true);
 
             try {
+                // Small delay to show initial status
+                await new Promise(resolve => setTimeout(resolve, 300));
+                updateMergeProgress('Analyzing records...', 10);
+
                 // Get conflict resolution preferences
                 const useLocalStaff = new Set();
                 const useLocalRecords = new Set();
@@ -3545,11 +3610,20 @@
                     });
                 }
 
+                // Update progress
+                updateMergeProgress('Merging staff records...', 30);
+                await new Promise(resolve => setTimeout(resolve, 200));
+
                 // Update local data
                 staffMembers = mergedStaff;
                 timeRecords = mergedRecords;
+
+                updateMergeProgress('Saving locally...', 50);
                 saveStaffMembers();
                 saveTimeRecords();
+                await new Promise(resolve => setTimeout(resolve, 200));
+
+                updateMergeProgress('Uploading to cloud...', 70);
 
                 // Save merged data to cloud
                 const backupData = {
@@ -3614,6 +3688,8 @@
                     throw new Error(errorData.error?.message || 'Merge upload failed');
                 }
 
+                updateMergeProgress('Finalizing...', 90);
+
                 // Update sync tracking
                 lastSyncTime = new Date();
                 localStorage.setItem('cestisLastSyncTime', lastSyncTime.toISOString());
@@ -3623,9 +3699,6 @@
                 cloudFileTimestamp = new Date().toISOString();
                 updateLastSavedByDisplay();
 
-                setCloudSyncing(false);
-                closeSmartMergeModal();
-
                 // Update UI (only if elements exist - admin only features)
                 if (document.getElementById('staffTable')) {
                     renderStaffTable();
@@ -3633,12 +3706,20 @@
                 renderTodayLog();
                 renderHistory();
 
+                updateMergeProgress('Merge complete!', 100);
+                await new Promise(resolve => setTimeout(resolve, 500));
+
+                setCloudSyncing(false);
+                hideMergeProgress();
+                closeSmartMergeModal();
+
                 // Show success
                 showMergeSuccessModal(mergeAnalysis);
 
             } catch (error) {
                 console.error('Error executing merge:', error);
                 setCloudSyncing(false);
+                hideMergeProgress();
 
                 if (error.message.includes('invalid_token') || error.message.includes('Invalid Credentials')) {
                     alert('Your session has expired. Please reconnect to Google Drive.');
@@ -3654,6 +3735,8 @@
 
         // Staff: Perform automatic merge without modal
         async function performStaffMerge() {
+            // Show progress for staff merge too
+            showMergeProgress('Connecting to cloud...', 0);
             setCloudSyncing(true);
 
             try {
@@ -3661,6 +3744,8 @@
                 if (!cloudFileId) {
                     await findExistingBackupFile();
                 }
+
+                updateMergeProgress('Downloading cloud data...', 20);
 
                 let cloudData = null;
                 let existingStaff = [];
@@ -3677,14 +3762,23 @@
                     );
 
                     if (response.ok) {
-                        cloudData = await response.json();
-                        // Robust null checking for cloud data structure
-                        if (cloudData && cloudData.data) {
-                            existingStaff = Array.isArray(cloudData.data.staffMembers) ? cloudData.data.staffMembers : [];
-                            existingRecords = Array.isArray(cloudData.data.timeRecords) ? cloudData.data.timeRecords : [];
+                        try {
+                            cloudData = await response.json();
+                            console.log('Staff merge - Cloud data loaded:', cloudData);
+                            // Robust null checking for cloud data structure
+                            if (cloudData && cloudData.data) {
+                                existingStaff = Array.isArray(cloudData.data.staffMembers) ? cloudData.data.staffMembers : [];
+                                existingRecords = Array.isArray(cloudData.data.timeRecords) ? cloudData.data.timeRecords : [];
+                            }
+                        } catch (parseError) {
+                            console.error('Failed to parse cloud data:', parseError);
+                            // Continue with empty arrays
                         }
                     }
                 }
+
+                console.log('Local staff count:', staffMembers.length, 'Local records count:', timeRecords.length);
+                console.log('Cloud staff count:', existingStaff.length, 'Cloud records count:', existingRecords.length);
 
                 // Merge staff members (add new local ones to cloud)
                 const mergedStaff = [...existingStaff];
@@ -3716,6 +3810,8 @@
                     }
                 });
 
+                updateMergeProgress('Merging records...', 40);
+
                 // Also pull any cloud-only records to local
                 let pulledStaff = 0;
                 let pulledRecords = 0;
@@ -3732,10 +3828,14 @@
                     }
                 });
 
+                updateMergeProgress('Saving locally...', 60);
+
                 if (pulledStaff > 0 || pulledRecords > 0) {
                     saveStaffMembers();
                     saveTimeRecords();
                 }
+
+                updateMergeProgress('Uploading to cloud...', 75);
 
                 // Save merged data to cloud
                 const backupData = {
@@ -3800,6 +3900,8 @@
                     throw new Error(errorData.error?.message || 'Merge failed');
                 }
 
+                updateMergeProgress('Finalizing...', 90);
+
                 // Update sync tracking
                 lastSyncTime = new Date();
                 localStorage.setItem('cestisLastSyncTime', lastSyncTime.toISOString());
@@ -3809,8 +3911,6 @@
                 cloudFileTimestamp = new Date().toISOString();
                 updateLastSavedByDisplay();
 
-                setCloudSyncing(false);
-
                 // Update UI (only if elements exist - admin only features)
                 if (document.getElementById('staffTable')) {
                     renderStaffTable();
@@ -3818,12 +3918,19 @@
                 renderTodayLog();
                 renderHistory();
 
+                updateMergeProgress('Merge complete!', 100);
+                await new Promise(resolve => setTimeout(resolve, 500));
+
+                setCloudSyncing(false);
+                hideMergeProgress();
+
                 // Show simple notification for staff (not the full modal)
                 showStaffMergeNotification(addedStaff + addedRecords, pulledStaff + pulledRecords);
 
             } catch (error) {
                 console.error('Error in staff merge:', error);
                 setCloudSyncing(false);
+                hideMergeProgress();
 
                 if (error.message.includes('invalid_token') || error.message.includes('Invalid Credentials')) {
                     alert('Your session has expired. Please reconnect to Google Drive.');
