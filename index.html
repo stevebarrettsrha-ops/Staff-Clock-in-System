@@ -3246,8 +3246,14 @@
                 timeRecords: { conflicts: [], newLocal: [], newCloud: [], total: 0 }
             };
 
-            const cloudStaff = cloudData?.data?.staffMembers || [];
-            const cloudRecords = cloudData?.data?.timeRecords || [];
+            // Robust null checking - ensure we have valid arrays
+            let cloudStaff = [];
+            let cloudRecords = [];
+
+            if (cloudData && cloudData.data) {
+                cloudStaff = Array.isArray(cloudData.data.staffMembers) ? cloudData.data.staffMembers : [];
+                cloudRecords = Array.isArray(cloudData.data.timeRecords) ? cloudData.data.timeRecords : [];
+            }
 
             // Analyze staff members
             analysis.staffMembers.total = staffMembers.length;
@@ -3660,8 +3666,11 @@
 
                     if (response.ok) {
                         cloudData = await response.json();
-                        existingStaff = cloudData.data?.staffMembers || [];
-                        existingRecords = cloudData.data?.timeRecords || [];
+                        // Robust null checking for cloud data structure
+                        if (cloudData && cloudData.data) {
+                            existingStaff = Array.isArray(cloudData.data.staffMembers) ? cloudData.data.staffMembers : [];
+                            existingRecords = Array.isArray(cloudData.data.timeRecords) ? cloudData.data.timeRecords : [];
+                        }
                     }
                 }
 
