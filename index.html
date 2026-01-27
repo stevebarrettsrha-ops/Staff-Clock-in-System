@@ -7656,12 +7656,24 @@
                 if (!response.ok) throw new Error('Failed to download backup');
                 const backup = await response.json();
                 if (!backup.version || !backup.data) throw new Error('Invalid backup format');
-                if (backup.data.users) { users = backup.data.users; localStorage.setItem('dashboardUsers', JSON.stringify(users)); }
-                if (backup.data.quickLinks) { quickLinks = backup.data.quickLinks; localStorage.setItem('quickLinks', JSON.stringify(quickLinks)); }
-                if (backup.data.mainLinks) { mainLinks = backup.data.mainLinks; localStorage.setItem('mainLinks', JSON.stringify(mainLinks)); }
-                if (backup.data.schoolSettings) { schoolSettings = backup.data.schoolSettings; localStorage.setItem('schoolSettings', JSON.stringify(schoolSettings)); }
-                lastSyncTime = new Date(); lastSavedBy = backup.savedBy || 'Unknown';
-                localStorage.setItem('schoolDashboardLastSyncTime', lastSyncTime.toISOString());
+
+                // Restore staff members (required for login)
+                if (backup.data.staffMembers) {
+                    staffMembers = backup.data.staffMembers;
+                    localStorage.setItem('cestisStaffMembers', JSON.stringify(staffMembers));
+                }
+
+                // Restore time records
+                if (backup.data.timeRecords) {
+                    timeRecords = backup.data.timeRecords;
+                    localStorage.setItem('cestisTimeRecords', JSON.stringify(timeRecords));
+                }
+
+                // Update sync tracking
+                lastSyncTime = new Date();
+                lastSavedBy = backup.savedBy || 'Unknown';
+                localStorage.setItem('cestisLastSyncTime', lastSyncTime.toISOString());
+
                 return true;
             } catch (error) { console.error('Perform login page sync error:', error); return false; }
         }
