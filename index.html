@@ -1589,6 +1589,52 @@
             --warning-bg: #78350f;
             --warning: #f59e0b;
         }
+
+        /* First-Time Sync Prompt Styles */
+        .first-time-sync-prompt {
+            background: linear-gradient(135deg, #e0f2fe 0%, #dbeafe 100%);
+            border: 2px solid #3b82f6;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+
+        .first-time-sync-prompt.hidden { display: none; }
+
+        .sync-prompt-icon { font-size: 2.5rem; margin-bottom: 0.75rem; }
+
+        .first-time-sync-prompt h3 { font-size: 1.1rem; font-weight: 600; color: #1e40af; margin-bottom: 0.5rem; }
+
+        .first-time-sync-prompt p { font-size: 0.85rem; color: #475569; line-height: 1.5; margin-bottom: 1rem; }
+
+        .sync-prompt-btn {
+            width: 100%; padding: 0.875rem 1.5rem;
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white; border: none; border-radius: 8px;
+            font-size: 0.95rem; font-weight: 600; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.3);
+        }
+
+        .sync-prompt-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 12px -2px rgba(59, 130, 246, 0.4); }
+        .sync-prompt-btn:active { transform: translateY(0); }
+        .sync-prompt-btn:disabled { background: #94a3b8; cursor: not-allowed; transform: none; box-shadow: none; }
+
+        .sync-prompt-dismiss { margin-top: 0.75rem; }
+        .sync-prompt-dismiss a { font-size: 0.8rem; color: #64748b; cursor: pointer; text-decoration: none; }
+        .sync-prompt-dismiss a:hover { color: #3b82f6; text-decoration: underline; }
+
+        .sync-status-message { margin-top: 1rem; padding: 0.75rem; background: white; border-radius: 8px; display: flex; align-items: center; justify-content: center; gap: 0.5rem; font-size: 0.9rem; }
+        .sync-status-message.success { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+        .sync-status-message.error { background: #fef2f2; color: #991b1b; border: 1px solid #fca5a5; }
+
+        .sync-status-icon { animation: pulse-icon 1.5s ease-in-out infinite; }
+        .sync-status-message.success .sync-status-icon,
+        .sync-status-message.error .sync-status-icon { animation: none; }
+
+        @keyframes pulse-icon { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
     </style>
     <!-- Google Identity Services -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -1627,6 +1673,23 @@
             </div>
 
             <div class="login-error" id="loginError"></div>
+
+            <!-- First-Time User Sync Prompt -->
+            <div class="first-time-sync-prompt" id="firstTimeSyncPrompt">
+                <div class="sync-prompt-icon">☁️</div>
+                <h3>First Time Here?</h3>
+                <p>If you're logging in for the first time or on a new device, please sync with Google Cloud first to get your account data.</p>
+                <button type="button" class="sync-prompt-btn" onclick="initiateLoginPageSync()">
+                    <span>🔄</span> Connect & Sync with Google
+                </button>
+                <div class="sync-prompt-dismiss">
+                    <a onclick="dismissFirstTimePrompt()">I already have local data - skip this</a>
+                </div>
+                <div class="sync-status-message" id="loginSyncStatus" style="display: none;">
+                    <span class="sync-status-icon">⏳</span>
+                    <span class="sync-status-text" id="loginSyncStatusText">Connecting...</span>
+                </div>
+            </div>
 
             <!-- Step 1: Normal Login -->
             <div id="loginStepNormal">
@@ -2755,6 +2818,12 @@
             localStorage.setItem('cestisGoogleTokenExpiry', expiry.toISOString());
 
             updateCloudUI(true);
+
+            // Check if this is a login page sync request
+            if (isLoginPageSync) {
+                await handleLoginPageSyncCallback();
+                return;
+            }
 
             // Try to find existing backup file
             await findExistingBackupFile();
@@ -7545,6 +7614,87 @@
             return `${h}h ${m}m`;
         }
 
+        // =========================================
+        // Login Page First-Time Sync Functions
+        // =========================================
+
+        let isLoginPageSync = false;
+
+        function initiateLoginPageSync() {
+            isLoginPageSync = true;
+            updateLoginSyncStatus('Connecting to Google...', true);
+            const syncBtn = document.querySelector('.sync-prompt-btn');
+            if (syncBtn) { syncBtn.disabled = true; syncBtn.innerHTML = '<span>⏳</span> Connecting...'; }
+            if (googleTokenClient) { googleTokenClient.requestAccessToken(); }
+            else {
+                initGoogleAuth();
+                setTimeout(() => {
+                    if (googleTokenClient) { googleTokenClient.requestAccessToken(); }
+                    else { isLoginPageSync = false; updateLoginSyncStatus('Google Sign-In not available.', false, true); resetLoginSyncButton(); }
+                }, 500);
+            }
+        }
+
+        async function handleLoginPageSyncCallback() {
+            updateLoginSyncStatus('Finding backup file...', true);
+            try {
+                await findExistingBackupFile();
+                if (cloudFileId) {
+                    updateLoginSyncStatus('Downloading user data...', true);
+                    const syncSuccess = await performLoginPageSync();
+                    if (syncSuccess) { updateLoginSyncStatus('Sync complete! You can now log in.', false, false, true); setTimeout(() => hideFirstTimeSyncPrompt(), 2000); }
+                    else { updateLoginSyncStatus('Sync failed. Please try again.', false, true); resetLoginSyncButton(); }
+                } else { updateLoginSyncStatus('No backup found. Please contact your administrator.', false, true); resetLoginSyncButton(); }
+            } catch (error) { updateLoginSyncStatus('Sync failed: ' + error.message, false, true); resetLoginSyncButton(); }
+            isLoginPageSync = false;
+        }
+
+        async function performLoginPageSync() {
+            try {
+                if (!cloudFileId || !googleAccessToken) return false;
+                const response = await fetch(`https://www.googleapis.com/drive/v3/files/${cloudFileId}?alt=media`, { headers: { 'Authorization': `Bearer ${googleAccessToken}` } });
+                if (!response.ok) throw new Error('Failed to download backup');
+                const backup = await response.json();
+                if (!backup.version || !backup.data) throw new Error('Invalid backup format');
+                if (backup.data.users) { users = backup.data.users; localStorage.setItem('dashboardUsers', JSON.stringify(users)); }
+                if (backup.data.quickLinks) { quickLinks = backup.data.quickLinks; localStorage.setItem('quickLinks', JSON.stringify(quickLinks)); }
+                if (backup.data.mainLinks) { mainLinks = backup.data.mainLinks; localStorage.setItem('mainLinks', JSON.stringify(mainLinks)); }
+                if (backup.data.schoolSettings) { schoolSettings = backup.data.schoolSettings; localStorage.setItem('schoolSettings', JSON.stringify(schoolSettings)); }
+                lastSyncTime = new Date(); lastSavedBy = backup.savedBy || 'Unknown';
+                localStorage.setItem('schoolDashboardLastSyncTime', lastSyncTime.toISOString());
+                return true;
+            } catch (error) { console.error('Perform login page sync error:', error); return false; }
+        }
+
+        function updateLoginSyncStatus(message, isLoading, isError = false, isSuccess = false) {
+            const statusDiv = document.getElementById('loginSyncStatus');
+            const statusText = document.getElementById('loginSyncStatusText');
+            const statusIcon = statusDiv?.querySelector('.sync-status-icon');
+            if (!statusDiv || !statusText) return;
+            if (message) {
+                statusDiv.style.display = 'flex'; statusText.textContent = message;
+                statusDiv.classList.remove('success', 'error');
+                if (isSuccess) { statusDiv.classList.add('success'); if (statusIcon) statusIcon.textContent = '✅'; }
+                else if (isError) { statusDiv.classList.add('error'); if (statusIcon) statusIcon.textContent = '❌'; }
+                else { if (statusIcon) statusIcon.textContent = '⏳'; }
+            } else { statusDiv.style.display = 'none'; }
+        }
+
+        function resetLoginSyncButton() {
+            const syncBtn = document.querySelector('.sync-prompt-btn');
+            if (syncBtn) { syncBtn.disabled = false; syncBtn.innerHTML = '<span>🔄</span> Connect & Sync with Google'; }
+        }
+
+        function dismissFirstTimePrompt() { hideFirstTimeSyncPrompt(); sessionStorage.setItem('firstTimeSyncDismissed', 'true'); }
+        function hideFirstTimeSyncPrompt() { const prompt = document.getElementById('firstTimeSyncPrompt'); if (prompt) prompt.classList.add('hidden'); }
+        function showFirstTimeSyncPrompt() { const prompt = document.getElementById('firstTimeSyncPrompt'); if (prompt) prompt.classList.remove('hidden'); }
+
+        function checkFirstTimeSyncPrompt() {
+            if (sessionStorage.getItem('firstTimeSyncDismissed') === 'true') { hideFirstTimeSyncPrompt(); return; }
+            if (sessionStorage.getItem('isLoggedIn') === 'true') { hideFirstTimeSyncPrompt(); return; }
+            showFirstTimeSyncPrompt();
+        }
+
         // Module Switching
         function switchModule(moduleId) {
             document.querySelectorAll('.nav-tab').forEach(tab => tab.classList.remove('active'));
@@ -7584,6 +7734,9 @@
                 }
                 renderHistory();
             }
+
+            // Check if first-time sync prompt should be shown
+            checkFirstTimeSyncPrompt();
 
             // Set dates
             const today = new Date().toISOString().split('T')[0];
