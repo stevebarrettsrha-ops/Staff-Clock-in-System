@@ -5496,14 +5496,13 @@
             document.getElementById('reportsTab').style.display = 'none';
             document.getElementById('editRecordsTab').style.display = 'none';
             document.getElementById('staffTab').style.display = 'none';
-            document.getElementById('staff').style.display = 'none';
+            document.getElementById('staff').style.removeProperty('display');
             document.getElementById('clockSection').style.display = 'block';
 
             if (currentUser.role === 'Admin') {
                 document.getElementById('reportsTab').style.display = 'block';
                 document.getElementById('editRecordsTab').style.display = 'block';
                 document.getElementById('staffTab').style.display = 'block';
-                document.getElementById('staff').style.display = 'block';
                 populateStaffSelect();
                 populateEditStaffSelect();
                 renderStaffTable();
