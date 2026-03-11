@@ -5062,6 +5062,134 @@
             }
         }
 
+        // Silent auto-sync to cloud (non-blocking, no user prompts)
+        let autoSyncInterval = null;
+        let isAutoSyncing = false;
+
+        async function silentCloudSync() {
+            // Only sync if connected to cloud and not already syncing
+            if (!isCloudConnected || !googleAccessToken || isAutoSyncing) {
+                return;
+            }
+
+            isAutoSyncing = true;
+
+            try {
+                const backupData = {
+                    version: '1.0',
+                    timestamp: new Date().toISOString(),
+                    savedBy: currentUser ? currentUser.fullName : 'Unknown',
+                    data: {
+                        staffMembers: staffMembers,
+                        timeRecords: timeRecords
+                    }
+                };
+
+                const jsonContent = JSON.stringify(backupData, null, 2);
+                const blob = new Blob([jsonContent], { type: 'application/json' });
+
+                let response;
+
+                if (cloudFileId) {
+                    response = await fetch(
+                        `https://www.googleapis.com/upload/drive/v3/files/${cloudFileId}?uploadType=media`,
+                        {
+                            method: 'PATCH',
+                            headers: {
+                                'Authorization': `Bearer ${googleAccessToken}`,
+                                'Content-Type': 'application/json'
+                            },
+                            body: blob
+                        }
+                    );
+                } else {
+                    // Try to find existing file first
+                    if (!cloudFileId) {
+                        const savedFileId = localStorage.getItem('cestisCloudFileId');
+                        if (savedFileId) {
+                            cloudFileId = savedFileId;
+                            // Retry with the found file ID
+                            response = await fetch(
+                                `https://www.googleapis.com/upload/drive/v3/files/${cloudFileId}?uploadType=media`,
+                                {
+                                    method: 'PATCH',
+                                    headers: {
+                                        'Authorization': `Bearer ${googleAccessToken}`,
+                                        'Content-Type': 'application/json'
+                                    },
+                                    body: blob
+                                }
+                            );
+                        } else {
+                            // Create new file
+                            const metadata = {
+                                name: GOOGLE_DRIVE_CONFIG.BACKUP_FILE_NAME,
+                                parents: [GOOGLE_DRIVE_CONFIG.FOLDER_ID],
+                                mimeType: 'application/json'
+                            };
+
+                            const formData = new FormData();
+                            formData.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+                            formData.append('file', blob);
+
+                            response = await fetch(
+                                'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name',
+                                {
+                                    method: 'POST',
+                                    headers: {
+                                        'Authorization': `Bearer ${googleAccessToken}`
+                                    },
+                                    body: formData
+                                }
+                            );
+
+                            if (response.ok) {
+                                const result = await response.json();
+                                cloudFileId = result.id;
+                                localStorage.setItem('cestisCloudFileId', cloudFileId);
+                            }
+                        }
+                    }
+                }
+
+                if (response && response.ok) {
+                    lastSyncTime = new Date();
+                    localStorage.setItem('cestisLastSyncTime', lastSyncTime.toISOString());
+                    lastSavedBy = currentUser ? currentUser.fullName : 'Unknown';
+                    cloudFileTimestamp = new Date().toISOString();
+                    updateLastSyncDisplay();
+                    updateLastSavedByDisplay();
+                    console.log('Auto-sync to cloud completed successfully');
+                } else if (response) {
+                    console.warn('Auto-sync failed with status:', response.status);
+                }
+            } catch (error) {
+                console.warn('Silent cloud sync failed:', error.message);
+            } finally {
+                isAutoSyncing = false;
+            }
+        }
+
+        // Start periodic auto-sync (every 5 minutes while clocked in)
+        function startAutoSync() {
+            stopAutoSync();
+            // Immediate sync on clock-in
+            silentCloudSync();
+            // Then every 5 minutes
+            autoSyncInterval = setInterval(() => {
+                if (currentSession && currentSession.status !== 'completed') {
+                    silentCloudSync();
+                }
+            }, 5 * 60 * 1000);
+        }
+
+        function stopAutoSync() {
+            if (autoSyncInterval) {
+                clearInterval(autoSyncInterval);
+                autoSyncInterval = null;
+            }
+        }
+
         // Login
         function handleLogin(event) {
             event.preventDefault();
@@ -5571,6 +5699,9 @@
             }
 
             showToast('Clocked in successfully! Have a productive day.', 'success');
+
+            // Auto-sync to cloud
+            startAutoSync();
         }
 
         // Start Break
@@ -5588,6 +5719,9 @@
             renderTodayLog();
 
             showToast('Break started. Enjoy your rest!', 'info');
+
+            // Auto-sync to cloud
+            silentCloudSync();
         }
 
         // End Break
@@ -5615,6 +5749,9 @@
             renderTodayLog();
 
             showToast('Break ended. Back to work!', 'success');
+
+            // Auto-sync to cloud
+            silentCloudSync();
         }
 
         // Clock Out
@@ -5646,6 +5783,10 @@
                 }
 
                 showToast('Clocked out successfully! Great work today.', 'success');
+
+                // Stop periodic auto-sync and do final sync
+                stopAutoSync();
+                silentCloudSync();
             }
         }
 
@@ -5775,6 +5916,9 @@
                     setTimeout(() => {
                         showToast(`Session resumed from ${clockInTime}. Your timer continues from where you left off.`, 'info');
                     }, 500);
+
+                    // Resume periodic auto-sync for active session
+                    startAutoSync();
                 }
             }
         }
@@ -7813,9 +7957,9 @@
         // Check cloud connection state and notify if needed
         function checkCloudAndNotify(reason){
           // Don't nag if user has never connected (no saved token at all and no saved file)
-          const hasEverConnected = localStorage.getItem('schoolDashboardGoogleAccessToken') ||
-                                   localStorage.getItem('schoolDashboardCloudFileId') ||
-                                   localStorage.getItem('schoolDashboardLastSyncTime');
+          const hasEverConnected = localStorage.getItem('cestisGoogleAccessToken') ||
+                                   localStorage.getItem('cestisCloudFileId') ||
+                                   localStorage.getItem('cestisLastSyncTime');
           if (!hasEverConnected) return;
 
           if (!navigator.onLine) {
@@ -7826,8 +7970,8 @@
           }
 
           if (!isCloudConnected) {
-            const savedExpiry = localStorage.getItem('schoolDashboardGoogleTokenExpiry');
-            const lastSync = localStorage.getItem('schoolDashboardLastSyncTime');
+            const savedExpiry = localStorage.getItem('cestisGoogleTokenExpiry');
+            const lastSync = localStorage.getItem('cestisLastSyncTime');
             let detail = '';
 
             if (savedExpiry && new Date(savedExpiry) <= new Date()) {
@@ -7858,7 +8002,7 @@
           // Check every 60 seconds if the token has expired
           cloudCheckInterval = setInterval(function(){
             if (isCloudConnected && googleAccessToken) {
-              const savedExpiry = localStorage.getItem('schoolDashboardGoogleTokenExpiry');
+              const savedExpiry = localStorage.getItem('cestisGoogleTokenExpiry');
               if (savedExpiry && new Date(savedExpiry) <= new Date()) {
                 // Token just expired
                 googleAccessToken = null;
@@ -7875,6 +8019,37 @@
           showCloudNotification('error', 'You Are Offline',
             'Internet connection lost. Data changes will only be saved locally until you reconnect.',
             false, 0);
+        });
+
+        // Auto-sync on page unload to prevent data loss
+        window.addEventListener('beforeunload', function() {
+            if (isCloudConnected && googleAccessToken && currentSession && currentSession.status !== 'completed') {
+                // Use sendBeacon for reliable unload sync
+                const backupData = {
+                    version: '1.0',
+                    timestamp: new Date().toISOString(),
+                    savedBy: currentUser ? currentUser.fullName : 'Unknown',
+                    data: {
+                        staffMembers: staffMembers,
+                        timeRecords: timeRecords
+                    }
+                };
+
+                const jsonContent = JSON.stringify(backupData, null, 2);
+
+                // sendBeacon doesn't support auth headers, so fall back to sync XHR for cloud save
+                if (cloudFileId) {
+                    try {
+                        const xhr = new XMLHttpRequest();
+                        xhr.open('PATCH', `https://www.googleapis.com/upload/drive/v3/files/${cloudFileId}?uploadType=media`, false); // synchronous
+                        xhr.setRequestHeader('Authorization', `Bearer ${googleAccessToken}`);
+                        xhr.setRequestHeader('Content-Type', 'application/json');
+                        xhr.send(jsonContent);
+                    } catch (e) {
+                        // Best-effort; localStorage is already saved
+                    }
+                }
+            }
         });
 
         window.addEventListener('online', function(){
