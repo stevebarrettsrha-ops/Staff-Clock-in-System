@@ -2555,7 +2555,7 @@
             // Google OAuth Client ID
             CLIENT_ID: '302497466088-0b619cqa9qno2c606k4rqp742lebc5o8.apps.googleusercontent.com',
             // Your Google Drive folder ID from the shared link
-            FOLDER_ID: '11vWe_Nc40TtJ1Hi7PoE7EZ3JrpR-K0Vj',
+            FOLDER_ID: '19got5jtkqjJlqOxuNWKLnB0ZRdKyMZgB',
             // File name for backup
             BACKUP_FILE_NAME: 'Staff_Clock_In_System.json',
             // API scopes needed - using 'drive' scope to allow access to shared files from any account
@@ -2965,26 +2965,16 @@
             // Check for changes by others before saving
             const cloudInfo = await checkCloudForChanges();
 
-            let confirmMessage = '⚠️ MULTI-USER CLOUD SYNC\n\n';
-            confirmMessage += 'You are about to save to a shared cloud backup.\n\n';
+            let confirmMessage = '🔄 MERGE & SAVE TO CLOUD\n\n';
+            confirmMessage += 'Your data will be merged with the cloud backup so all users\' records are preserved.\n\n';
 
             if (cloudInfo && cloudInfo.savedBy) {
                 const cloudTime = new Date(cloudInfo.timestamp);
                 const timeSinceLastSave = getTimeAgo(cloudTime);
-
-                // Check if someone else saved since our last sync
-                const hasConflict = lastSyncTime && cloudTime > lastSyncTime;
-
-                if (hasConflict && cloudInfo.savedBy !== (currentUser ? currentUser.fullName : '')) {
-                    confirmMessage += `⚠️ WARNING: ${cloudInfo.savedBy} saved changes ${timeSinceLastSave}!\n`;
-                    confirmMessage += `Your local data may not include their changes.\n\n`;
-                    confirmMessage += `💡 Recommendation: Click Cancel, then "Sync from Cloud" first.\n\n`;
-                } else {
-                    confirmMessage += `Last saved by: ${cloudInfo.savedBy} (${timeSinceLastSave})\n\n`;
-                }
+                confirmMessage += `Last saved by: ${cloudInfo.savedBy} (${timeSinceLastSave})\n\n`;
             }
 
-            confirmMessage += 'This will overwrite the cloud backup. Continue?';
+            confirmMessage += 'Continue?';
 
             if (!confirm(confirmMessage)) {
                 return;
@@ -2993,14 +2983,64 @@
             setCloudSyncing(true);
 
             try {
-                // Prepare data for backup (using this app's data structure)
+                // Merge with existing cloud data first to preserve all users' records
+                let mergedStaff = [...staffMembers];
+                let mergedRecords = [...timeRecords];
+
+                if (cloudFileId) {
+                    try {
+                        const downloadResp = await fetch(
+                            `https://www.googleapis.com/drive/v3/files/${cloudFileId}?alt=media`,
+                            { headers: { 'Authorization': `Bearer ${googleAccessToken}` } }
+                        );
+
+                        if (downloadResp.ok) {
+                            const cloudData = await downloadResp.json();
+                            if (cloudData && cloudData.data) {
+                                const cloudRecords = Array.isArray(cloudData.data.timeRecords) ? cloudData.data.timeRecords : [];
+                                const cloudStaff = Array.isArray(cloudData.data.staffMembers) ? cloudData.data.staffMembers : [];
+
+                                // Merge cloud records into local - keep newest version of each
+                                cloudRecords.forEach(cloudRecord => {
+                                    const localIdx = mergedRecords.findIndex(r => r.id === cloudRecord.id);
+                                    if (localIdx === -1) {
+                                        mergedRecords.push({ ...cloudRecord });
+                                    } else {
+                                        const localMod = mergedRecords[localIdx].lastModified ? new Date(mergedRecords[localIdx].lastModified) : new Date(0);
+                                        const cloudMod = cloudRecord.lastModified ? new Date(cloudRecord.lastModified) : new Date(0);
+                                        if (cloudMod > localMod) {
+                                            mergedRecords[localIdx] = { ...cloudRecord };
+                                        }
+                                    }
+                                });
+
+                                // Merge cloud staff into local
+                                cloudStaff.forEach(cs => {
+                                    if (!mergedStaff.find(s => s.id === cs.id || s.username === cs.username)) {
+                                        mergedStaff.push({ ...cs });
+                                    }
+                                });
+
+                                // Update local data with merged results
+                                staffMembers = mergedStaff;
+                                timeRecords = mergedRecords;
+                                saveStaffMembers();
+                                saveTimeRecords();
+                            }
+                        }
+                    } catch (mergeErr) {
+                        console.warn('Could not merge with cloud data, saving local data only:', mergeErr.message);
+                    }
+                }
+
+                // Upload merged data
                 const backupData = {
                     version: '1.0',
                     timestamp: new Date().toISOString(),
                     savedBy: currentUser ? currentUser.fullName : 'Unknown',
                     data: {
-                        staffMembers: staffMembers,
-                        timeRecords: timeRecords
+                        staffMembers: mergedStaff,
+                        timeRecords: mergedRecords
                     }
                 };
 
@@ -3057,6 +3097,16 @@
                     throw new Error(errorData.error?.message || 'Upload failed');
                 }
 
+                // Refresh UI with merged data
+                if (currentUser && currentUser.role !== 'Viewer') {
+                    loadTodaysSession();
+                }
+                renderTodayLog();
+                renderHistory();
+                if (currentUser && currentUser.role === 'Admin') {
+                    renderStaffTable();
+                }
+
                 // Update last sync time
                 lastSyncTime = new Date();
                 localStorage.setItem('cestisLastSyncTime', lastSyncTime.toISOString());
@@ -3105,7 +3155,7 @@
                 return;
             }
 
-            if (!confirm('⚠️ This will replace your local data with the cloud backup. Are you sure you want to continue?')) {
+            if (!confirm('🔄 This will merge cloud data with your local data so all users\' records are preserved.\n\nContinue?')) {
                 return;
             }
 
@@ -3133,23 +3183,64 @@
                     throw new Error('Invalid backup file format');
                 }
 
-                // Restore data (using this app's data structure)
+                // Merge cloud staff with local (add cloud-only staff)
                 if (backupData.data.staffMembers) {
-                    staffMembers = backupData.data.staffMembers;
+                    const cloudStaff = Array.isArray(backupData.data.staffMembers) ? backupData.data.staffMembers : [];
+                    cloudStaff.forEach(cs => {
+                        if (!staffMembers.find(s => s.id === cs.id || s.username === cs.username)) {
+                            staffMembers.push({ ...cs });
+                        }
+                    });
                     saveStaffMembers();
                 }
 
+                // Merge cloud time records with local using lastModified
                 if (backupData.data.timeRecords) {
-                    // Preserve current user's active session if one exists
-                    if (currentSession && currentSession.status !== 'completed') {
-                        const cloudRecords = backupData.data.timeRecords.filter(r => r.id !== currentSession.id);
-                        timeRecords = cloudRecords;
-                        timeRecords.push(currentSession);
-                    } else {
-                        timeRecords = backupData.data.timeRecords;
-                    }
+                    const cloudRecords = Array.isArray(backupData.data.timeRecords) ? backupData.data.timeRecords : [];
+                    cloudRecords.forEach(cloudRecord => {
+                        const localIdx = timeRecords.findIndex(r => r.id === cloudRecord.id);
+                        if (localIdx === -1) {
+                            // Cloud-only record - add it
+                            timeRecords.push({ ...cloudRecord });
+                        } else {
+                            // Exists in both - keep the newest, but protect active sessions
+                            if (currentSession && currentSession.id === cloudRecord.id && currentSession.status !== 'completed') {
+                                // Don't overwrite active session
+                            } else {
+                                const localMod = timeRecords[localIdx].lastModified ? new Date(timeRecords[localIdx].lastModified) : new Date(0);
+                                const cloudMod = cloudRecord.lastModified ? new Date(cloudRecord.lastModified) : new Date(0);
+                                if (cloudMod > localMod) {
+                                    timeRecords[localIdx] = { ...cloudRecord };
+                                }
+                            }
+                        }
+                    });
                     saveTimeRecords();
                 }
+
+                // Upload merged data back to cloud
+                const mergedBackup = {
+                    version: '1.0',
+                    timestamp: new Date().toISOString(),
+                    savedBy: currentUser ? currentUser.fullName : 'Unknown',
+                    data: {
+                        staffMembers: staffMembers,
+                        timeRecords: timeRecords
+                    }
+                };
+
+                const mergedBlob = new Blob([JSON.stringify(mergedBackup, null, 2)], { type: 'application/json' });
+                await fetch(
+                    `https://www.googleapis.com/upload/drive/v3/files/${cloudFileId}?uploadType=media`,
+                    {
+                        method: 'PATCH',
+                        headers: {
+                            'Authorization': `Bearer ${googleAccessToken}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: mergedBlob
+                    }
+                );
 
                 // Update last sync time
                 lastSyncTime = new Date();
@@ -3169,13 +3260,11 @@
                 setCloudSyncing(false);
 
                 // Update last saved by info
-                lastSavedBy = backupData.savedBy || 'Unknown';
-                cloudFileTimestamp = backupData.timestamp;
+                lastSavedBy = currentUser ? currentUser.fullName : 'Unknown';
+                cloudFileTimestamp = new Date().toISOString();
                 updateLastSavedByDisplay();
 
-                const backupTime = new Date(backupData.timestamp).toLocaleString();
-                const savedByInfo = backupData.savedBy ? `\nLast saved by: ${backupData.savedBy}` : '';
-                alert(`✅ Data synced from cloud successfully!\n\nBackup was created: ${backupTime}${savedByInfo}`);
+                alert('✅ Data merged with cloud successfully!\n\nAll users\' records have been preserved.');
 
             } catch (error) {
                 console.error('Error syncing from cloud:', error);
@@ -3684,8 +3773,8 @@
                 // Build merged staff list
                 const mergedStaff = [...staffMembers];
 
-                // Add new staff from cloud (with null safety)
-                if (addNewOnly && Array.isArray(mergeAnalysis.staffMembers.newCloud)) {
+                // Always add cloud-only staff to preserve all users' data
+                if (Array.isArray(mergeAnalysis.staffMembers.newCloud)) {
                     mergeAnalysis.staffMembers.newCloud.forEach(cloudStaff => {
                         if (cloudStaff && !mergedStaff.find(s => s.id === cloudStaff.id || s.username === cloudStaff.username)) {
                             mergedStaff.push({ ...cloudStaff });
@@ -3709,8 +3798,8 @@
                 // Build merged time records list
                 const mergedRecords = [...timeRecords];
 
-                // Add new records from cloud (with null safety)
-                if (addNewOnly && Array.isArray(mergeAnalysis.timeRecords.newCloud)) {
+                // Always add cloud-only records to preserve all users' time data
+                if (Array.isArray(mergeAnalysis.timeRecords.newCloud)) {
                     mergeAnalysis.timeRecords.newCloud.forEach(cloudRecord => {
                         if (cloudRecord && !mergedRecords.find(r => r.id === cloudRecord.id)) {
                             mergedRecords.push({ ...cloudRecord });
@@ -4397,21 +4486,35 @@
                     throw new Error('Invalid backup file format');
                 }
 
-                // Restore all data
+                // Merge cloud data with local to preserve all users' records
                 if (backupData.data.staffMembers) {
-                    staffMembers = backupData.data.staffMembers;
+                    const cloudStaff = Array.isArray(backupData.data.staffMembers) ? backupData.data.staffMembers : [];
+                    cloudStaff.forEach(cs => {
+                        if (!staffMembers.find(s => s.id === cs.id || s.username === cs.username)) {
+                            staffMembers.push({ ...cs });
+                        }
+                    });
                     saveStaffMembers();
                 }
 
                 if (backupData.data.timeRecords) {
-                    // Preserve current user's active session if one exists
-                    if (currentSession && currentSession.status !== 'completed') {
-                        const cloudRecords = backupData.data.timeRecords.filter(r => r.id !== currentSession.id);
-                        timeRecords = cloudRecords;
-                        timeRecords.push(currentSession);
-                    } else {
-                        timeRecords = backupData.data.timeRecords;
-                    }
+                    const cloudRecords = Array.isArray(backupData.data.timeRecords) ? backupData.data.timeRecords : [];
+                    cloudRecords.forEach(cloudRecord => {
+                        const localIdx = timeRecords.findIndex(r => r.id === cloudRecord.id);
+                        if (localIdx === -1) {
+                            timeRecords.push({ ...cloudRecord });
+                        } else {
+                            if (currentSession && currentSession.id === cloudRecord.id && currentSession.status !== 'completed') {
+                                // Don't overwrite active session
+                            } else {
+                                const localMod = timeRecords[localIdx].lastModified ? new Date(timeRecords[localIdx].lastModified) : new Date(0);
+                                const cloudMod = cloudRecord.lastModified ? new Date(cloudRecord.lastModified) : new Date(0);
+                                if (cloudMod > localMod) {
+                                    timeRecords[localIdx] = { ...cloudRecord };
+                                }
+                            }
+                        }
+                    });
                     saveTimeRecords();
                 }
 
@@ -4437,8 +4540,7 @@
 
                 setCloudSyncing(false);
 
-                const savedByInfo = backupData.savedBy ? ` (saved by ${backupData.savedBy})` : '';
-                showToast(`Synced from cloud${savedByInfo}`, 'success');
+                showToast('Merged with cloud data successfully', 'success');
 
             } catch (error) {
                 console.error('Error syncing on login:', error);
@@ -4483,13 +4585,13 @@
 
                             ${hasBackup ? `
                                 <p style="text-align: center; color: var(--text-secondary); margin-bottom: var(--space-5);">
-                                    A cloud backup was found. You must sync your data before continuing to ensure you have the latest information.
+                                    A cloud backup was found. Syncing will merge your local data with the cloud so all users' records are preserved.
                                 </p>
 
-                                <div style="background: var(--warning-bg); border: 1px solid var(--warning); border-radius: var(--radius-md); padding: var(--space-3); margin-bottom: var(--space-5);">
-                                    <strong style="color: var(--warning);">⚠️ Important:</strong>
+                                <div style="background: var(--info-bg); border: 1px solid var(--info-border); border-radius: var(--radius-md); padding: var(--space-3); margin-bottom: var(--space-5);">
+                                    <strong style="color: var(--info);">💡 Note:</strong>
                                     <span style="color: var(--text-secondary); font-size: 0.9rem;">
-                                        This will replace your local data with the cloud backup.
+                                        Your local records and cloud records will be merged together. No data will be lost.
                                     </span>
                                 </div>
 
@@ -4564,16 +4666,67 @@
                     throw new Error('Invalid backup file format');
                 }
 
-                // Restore data
+                // Merge cloud data with local data to preserve all users' records
                 if (backupData.data.staffMembers) {
-                    staffMembers = backupData.data.staffMembers;
+                    const cloudStaff = Array.isArray(backupData.data.staffMembers) ? backupData.data.staffMembers : [];
+                    // Add cloud-only staff to local
+                    cloudStaff.forEach(cs => {
+                        if (!staffMembers.find(s => s.id === cs.id || s.username === cs.username)) {
+                            staffMembers.push({ ...cs });
+                        }
+                    });
+                    // Add local-only staff to cloud set
+                    staffMembers.forEach(ls => {
+                        if (!cloudStaff.find(s => s.id === ls.id || s.username === ls.username)) {
+                            // Local-only staff, already in staffMembers
+                        }
+                    });
                     saveStaffMembers();
                 }
 
                 if (backupData.data.timeRecords) {
-                    timeRecords = backupData.data.timeRecords;
+                    const cloudRecords = Array.isArray(backupData.data.timeRecords) ? backupData.data.timeRecords : [];
+                    // Merge: add cloud-only records, update existing with newer version
+                    cloudRecords.forEach(cloudRecord => {
+                        const localIdx = timeRecords.findIndex(r => r.id === cloudRecord.id);
+                        if (localIdx === -1) {
+                            timeRecords.push({ ...cloudRecord });
+                        } else {
+                            const localMod = timeRecords[localIdx].lastModified ? new Date(timeRecords[localIdx].lastModified) : new Date(0);
+                            const cloudMod = cloudRecord.lastModified ? new Date(cloudRecord.lastModified) : new Date(0);
+                            if (cloudMod > localMod) {
+                                if (!(currentSession && currentSession.id === cloudRecord.id && currentSession.status !== 'completed')) {
+                                    timeRecords[localIdx] = { ...cloudRecord };
+                                }
+                            }
+                        }
+                    });
                     saveTimeRecords();
                 }
+
+                // Upload the merged result back to cloud so all records are unified
+                const mergedBackup = {
+                    version: '1.0',
+                    timestamp: new Date().toISOString(),
+                    savedBy: currentUser ? currentUser.fullName : 'Unknown',
+                    data: {
+                        staffMembers: staffMembers,
+                        timeRecords: timeRecords
+                    }
+                };
+
+                const mergedBlob = new Blob([JSON.stringify(mergedBackup, null, 2)], { type: 'application/json' });
+                await fetch(
+                    `https://www.googleapis.com/upload/drive/v3/files/${cloudFileId}?uploadType=media`,
+                    {
+                        method: 'PATCH',
+                        headers: {
+                            'Authorization': `Bearer ${googleAccessToken}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: mergedBlob
+                    }
+                );
 
                 // Update sync tracking
                 lastSyncTime = new Date();
@@ -4581,11 +4734,14 @@
                 updateLastSyncDisplay();
 
                 // Update last saved by info
-                lastSavedBy = backupData.savedBy || 'Unknown';
-                cloudFileTimestamp = backupData.timestamp;
+                lastSavedBy = currentUser ? currentUser.fullName : 'Unknown';
+                cloudFileTimestamp = new Date().toISOString();
                 updateLastSavedByDisplay();
 
                 // Refresh UI
+                if (currentUser && currentUser.role !== 'Viewer') {
+                    loadTodaysSession();
+                }
                 renderTodayLog();
                 renderHistory();
                 if (currentUser && currentUser.role === 'Admin') {
@@ -4595,8 +4751,7 @@
                 setCloudSyncing(false);
                 closeForcedSyncModal(true);
 
-                const savedByInfo = backupData.savedBy ? ` (saved by ${backupData.savedBy})` : '';
-                showToast(`Connected and synced from cloud${savedByInfo}`, 'success');
+                showToast('Connected and merged with cloud data', 'success');
 
             } catch (error) {
                 console.error('Error during forced sync:', error);
