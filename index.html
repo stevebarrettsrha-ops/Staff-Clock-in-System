@@ -3140,7 +3140,14 @@
                 }
 
                 if (backupData.data.timeRecords) {
-                    timeRecords = backupData.data.timeRecords;
+                    // Preserve current user's active session if one exists
+                    if (currentSession && currentSession.status !== 'completed') {
+                        const cloudRecords = backupData.data.timeRecords.filter(r => r.id !== currentSession.id);
+                        timeRecords = cloudRecords;
+                        timeRecords.push(currentSession);
+                    } else {
+                        timeRecords = backupData.data.timeRecords;
+                    }
                     saveTimeRecords();
                 }
 
@@ -3149,7 +3156,10 @@
                 localStorage.setItem('cestisLastSyncTime', lastSyncTime.toISOString());
                 updateLastSyncDisplay();
 
-                // Refresh UI
+                // Refresh UI and reload active session
+                if (currentUser && currentUser.role !== 'Viewer') {
+                    loadTodaysSession();
+                }
                 renderTodayLog();
                 renderHistory();
                 if (currentUser && currentUser.role === 'Admin') {
@@ -3906,18 +3916,23 @@
                     }
                 });
 
-                // Merge time records
+                // Merge time records - use lastModified to pick the most recent version
                 const mergedRecords = [...existingRecords];
                 let addedRecords = 0;
                 timeRecords.forEach(localRecord => {
-                    const exists = mergedRecords.find(r => r.id === localRecord.id);
-                    if (!exists) {
+                    const existIdx = mergedRecords.findIndex(r => r.id === localRecord.id);
+                    if (existIdx === -1) {
                         mergedRecords.push({ ...localRecord });
                         addedRecords++;
                     } else {
-                        // Update existing record
-                        const idx = mergedRecords.findIndex(r => r.id === localRecord.id);
-                        mergedRecords[idx] = { ...localRecord };
+                        // Use the most recently modified version
+                        const cloudRecord = mergedRecords[existIdx];
+                        const localMod = localRecord.lastModified ? new Date(localRecord.lastModified) : new Date(0);
+                        const cloudMod = cloudRecord.lastModified ? new Date(cloudRecord.lastModified) : new Date(0);
+                        if (localMod >= cloudMod) {
+                            mergedRecords[existIdx] = { ...localRecord };
+                        }
+                        // else keep cloud version (it's newer)
                     }
                 });
 
@@ -3933,9 +3948,21 @@
                     }
                 });
                 existingRecords.forEach(cloudRecord => {
-                    if (!timeRecords.find(r => r.id === cloudRecord.id)) {
+                    const localIdx = timeRecords.findIndex(r => r.id === cloudRecord.id);
+                    if (localIdx === -1) {
                         timeRecords.push({ ...cloudRecord });
                         pulledRecords++;
+                    } else {
+                        // Update local record if cloud version is newer
+                        const localMod = timeRecords[localIdx].lastModified ? new Date(timeRecords[localIdx].lastModified) : new Date(0);
+                        const cloudMod = cloudRecord.lastModified ? new Date(cloudRecord.lastModified) : new Date(0);
+                        if (cloudMod > localMod) {
+                            // Don't overwrite an active session for the current user
+                            if (!(currentSession && currentSession.id === cloudRecord.id && currentSession.status !== 'completed')) {
+                                timeRecords[localIdx] = { ...cloudRecord };
+                                pulledRecords++;
+                            }
+                        }
                     }
                 });
 
@@ -4377,7 +4404,14 @@
                 }
 
                 if (backupData.data.timeRecords) {
-                    timeRecords = backupData.data.timeRecords;
+                    // Preserve current user's active session if one exists
+                    if (currentSession && currentSession.status !== 'completed') {
+                        const cloudRecords = backupData.data.timeRecords.filter(r => r.id !== currentSession.id);
+                        timeRecords = cloudRecords;
+                        timeRecords.push(currentSession);
+                    } else {
+                        timeRecords = backupData.data.timeRecords;
+                    }
                     saveTimeRecords();
                 }
 
@@ -4391,7 +4425,10 @@
                 cloudFileTimestamp = backupData.timestamp;
                 updateLastSavedByDisplay();
 
-                // Refresh UI
+                // Refresh UI and reload active session
+                if (currentUser && currentUser.role !== 'Viewer') {
+                    loadTodaysSession();
+                }
                 renderTodayLog();
                 renderHistory();
                 if (currentUser && currentUser.role === 'Admin') {
@@ -5075,13 +5112,80 @@
             isAutoSyncing = true;
 
             try {
+                // Resolve cloud file ID if not set
+                if (!cloudFileId) {
+                    const savedFileId = localStorage.getItem('cestisCloudFileId');
+                    if (savedFileId) {
+                        cloudFileId = savedFileId;
+                    }
+                }
+
+                // If cloud file exists, download and merge before uploading
+                let mergedRecords = [...timeRecords];
+                let mergedStaff = [...staffMembers];
+
+                if (cloudFileId) {
+                    try {
+                        const downloadResp = await fetch(
+                            `https://www.googleapis.com/drive/v3/files/${cloudFileId}?alt=media`,
+                            { headers: { 'Authorization': `Bearer ${googleAccessToken}` } }
+                        );
+
+                        if (downloadResp.ok) {
+                            const cloudData = await downloadResp.json();
+                            if (cloudData && cloudData.data) {
+                                const cloudRecords = Array.isArray(cloudData.data.timeRecords) ? cloudData.data.timeRecords : [];
+                                const cloudStaff = Array.isArray(cloudData.data.staffMembers) ? cloudData.data.staffMembers : [];
+
+                                // Merge time records using lastModified timestamps
+                                mergedRecords = [...timeRecords];
+                                cloudRecords.forEach(cloudRecord => {
+                                    const localIdx = mergedRecords.findIndex(r => r.id === cloudRecord.id);
+                                    if (localIdx === -1) {
+                                        // Cloud-only record - pull it in
+                                        mergedRecords.push({ ...cloudRecord });
+                                    } else {
+                                        // Exists in both - keep the most recently modified
+                                        const localMod = mergedRecords[localIdx].lastModified ? new Date(mergedRecords[localIdx].lastModified) : new Date(0);
+                                        const cloudMod = cloudRecord.lastModified ? new Date(cloudRecord.lastModified) : new Date(0);
+                                        // Don't overwrite current user's active session
+                                        if (currentSession && currentSession.id === cloudRecord.id && currentSession.status !== 'completed') {
+                                            // Keep local active session
+                                        } else if (cloudMod > localMod) {
+                                            mergedRecords[localIdx] = { ...cloudRecord };
+                                        }
+                                    }
+                                });
+
+                                // Merge staff members
+                                mergedStaff = [...staffMembers];
+                                cloudStaff.forEach(cs => {
+                                    if (!mergedStaff.find(s => s.id === cs.id || s.username === cs.username)) {
+                                        mergedStaff.push({ ...cs });
+                                    }
+                                });
+
+                                // Update local data with merged results
+                                timeRecords = mergedRecords;
+                                staffMembers = mergedStaff;
+                                saveTimeRecords();
+                                saveStaffMembers();
+                            }
+                        }
+                    } catch (downloadErr) {
+                        // If download fails, just upload local data
+                        console.warn('Could not download cloud data for merge:', downloadErr.message);
+                    }
+                }
+
+                // Upload merged data
                 const backupData = {
                     version: '1.0',
                     timestamp: new Date().toISOString(),
                     savedBy: currentUser ? currentUser.fullName : 'Unknown',
                     data: {
-                        staffMembers: staffMembers,
-                        timeRecords: timeRecords
+                        staffMembers: mergedStaff,
+                        timeRecords: mergedRecords
                     }
                 };
 
@@ -5103,52 +5207,32 @@
                         }
                     );
                 } else {
-                    // Try to find existing file first
-                    if (!cloudFileId) {
-                        const savedFileId = localStorage.getItem('cestisCloudFileId');
-                        if (savedFileId) {
-                            cloudFileId = savedFileId;
-                            // Retry with the found file ID
-                            response = await fetch(
-                                `https://www.googleapis.com/upload/drive/v3/files/${cloudFileId}?uploadType=media`,
-                                {
-                                    method: 'PATCH',
-                                    headers: {
-                                        'Authorization': `Bearer ${googleAccessToken}`,
-                                        'Content-Type': 'application/json'
-                                    },
-                                    body: blob
-                                }
-                            );
-                        } else {
-                            // Create new file
-                            const metadata = {
-                                name: GOOGLE_DRIVE_CONFIG.BACKUP_FILE_NAME,
-                                parents: [GOOGLE_DRIVE_CONFIG.FOLDER_ID],
-                                mimeType: 'application/json'
-                            };
+                    // Create new file
+                    const metadata = {
+                        name: GOOGLE_DRIVE_CONFIG.BACKUP_FILE_NAME,
+                        parents: [GOOGLE_DRIVE_CONFIG.FOLDER_ID],
+                        mimeType: 'application/json'
+                    };
 
-                            const formData = new FormData();
-                            formData.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-                            formData.append('file', blob);
+                    const formData = new FormData();
+                    formData.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+                    formData.append('file', blob);
 
-                            response = await fetch(
-                                'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name',
-                                {
-                                    method: 'POST',
-                                    headers: {
-                                        'Authorization': `Bearer ${googleAccessToken}`
-                                    },
-                                    body: formData
-                                }
-                            );
-
-                            if (response.ok) {
-                                const result = await response.json();
-                                cloudFileId = result.id;
-                                localStorage.setItem('cestisCloudFileId', cloudFileId);
-                            }
+                    response = await fetch(
+                        'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name',
+                        {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${googleAccessToken}`
+                            },
+                            body: formData
                         }
+                    );
+
+                    if (response.ok) {
+                        const result = await response.json();
+                        cloudFileId = result.id;
+                        localStorage.setItem('cestisCloudFileId', cloudFileId);
                     }
                 }
 
@@ -5682,7 +5766,8 @@
                 clockOut: null,
                 status: 'working',
                 breaks: [],
-                currentBreakStart: null
+                currentBreakStart: null,
+                lastModified: now.toISOString()
             };
 
             timeRecords.push(currentSession);
@@ -5713,6 +5798,7 @@
 
             currentSession.status = 'break';
             currentSession.currentBreakStart = new Date().toISOString();
+            currentSession.lastModified = new Date().toISOString();
             saveTimeRecords();
 
             updateClockInterface();
@@ -5743,6 +5829,7 @@
 
             currentSession.status = 'working';
             currentSession.currentBreakStart = null;
+            currentSession.lastModified = new Date().toISOString();
             saveTimeRecords();
 
             updateClockInterface();
@@ -5769,6 +5856,7 @@
             if (confirm('Are you sure you want to clock out?')) {
                 currentSession.clockOut = new Date().toISOString();
                 currentSession.status = 'completed';
+                currentSession.lastModified = new Date().toISOString();
                 saveTimeRecords();
 
                 stopTimer();
